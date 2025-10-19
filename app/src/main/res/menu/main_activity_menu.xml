@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/generateBillMenu"
+        android:title="@string/generateBillButton"
+        app:showAsAction="never"/>
+
+    <item
+        android:id="@+id/stockManagementMenu"
+        android:title="@string/StockManagementButton"
+        app:showAsAction="never"/>
+
+    <!-- New Menu Item for Bill History -->
+    <item
+        android:id="@+id/billHistoryMenu"
+        android:title="@string/bill_history"
+        android:icon="@drawable/ic_receipt"
+        app:showAsAction="ifRoom" />
+
+    <!-- New Menu Item for Customer Details -->
+    <item
+        android:id="@+id/customerDetailsMenu"
+        android:title="@string/customer_details"
+        android:icon="@drawable/ic_phone"
+        app:showAsAction="ifRoom"/>
+</menu>

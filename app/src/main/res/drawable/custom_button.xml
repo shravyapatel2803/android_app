@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- State when the button is pressed -->
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <!-- A darker teal for the pressed state -->
+            <solid android:color="@color/teal_dark" />
+            <corners android:radius="12dp" />
+        </shape>
+    </item>
+
+    <!-- Default, non-pressed state -->
+    <item>
+        <shape android:shape="rectangle">
+            <!-- A rich, dark teal gradient -->
+            <gradient
+                android:angle="270"
+                android:endColor="@color/teal_dark"
+                android:startColor="@color/teal_primary" />
+            <!-- Matching rounded corners -->
+            <corners android:radius="12dp" />
+        </shape>
+    </item>
+</selector>

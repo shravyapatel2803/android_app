@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Bill Generator</string>
+    <string name="generateBillButton">Generate Bill</string>
+    <string name="StockManagementButton">Stock Management</string>
+    <string name="customerName">Enter Customer Name</string>
+    <string name="customerPhone">Enter Customer Phone</string>
+    <string name="customerVillage">Enter Customer Village/Town/City</string>
+    <string name="enter_gold_rate">Enter Gold Rate</string>
+    <string name="enter_silver_rate">Enter Silver Rate</string>
+    <string name="add_item_generate_bill">Add Item</string>
+    <string name="net_bill">Net Bill</string>
+
+    <!-- ADD THESE TWO LINES -->
+    <string name="bill_history">Bill History</string>
+    <string name="customer_details">Customer Details</string>
+</resources>

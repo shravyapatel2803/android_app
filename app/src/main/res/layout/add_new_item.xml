@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:background="@color/brown"
+    android:orientation="vertical">
+    <TextView
+        android:id="@+id/name_editText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Add new item"
+        android:textSize="35sp"
+        android:gravity="center"
+        android:textColor="@color/white"
+        android:padding="5sp"
+        android:layout_margin="25sp"/>
+
+    <EditText
+        android:id="@+id/item_search_editText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="Enter Barcode For Search"
+        android:textSize="25sp"
+        android:gravity="center"
+        android:textColor="@color/white"
+        android:layout_margin="25sp"/>
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/add_item_recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+</LinearLayout>

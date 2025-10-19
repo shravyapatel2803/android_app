@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Add icon for generating PDF -->
+    <item
+        android:id="@+id/action_generate_pdf"
+        android:icon="@android:drawable/ic_menu_save"
+        android:title="Save as PDF"
+        app:showAsAction="ifRoom" />
+</menu>
+    
