@@ -8,6 +8,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -26,6 +27,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.billgenerator.adapters.customer_recycler_adapter;
 import com.example.billgenerator.database.databaseSystem;
+import com.example.billgenerator.fragments.CustomerDetailsFragment;
 import com.example.billgenerator.models.customer_recycler_model;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
@@ -63,7 +65,7 @@ public class customer_details_activity extends AppCompatActivity {
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         // Pass the activity context and the list to the adapter
-        adapter = new customer_recycler_adapter(this, customerList);
+        adapter = new customer_recycler_adapter(this, customerList, new CustomerDetailsFragment());
         recyclerView.setAdapter(adapter);
 
         loadCustomersFromDB();
@@ -79,6 +81,8 @@ public class customer_details_activity extends AppCompatActivity {
             int nameIndex = cursor.getColumnIndex("name");
             int phoneIndex = cursor.getColumnIndex("phone");
             int villageIndex = cursor.getColumnIndex("village");
+            int debtIndex = cursor.getColumnIndex("debt");
+
 
             while (cursor.moveToNext()) {
                 if (idIndex != -1 && nameIndex != -1 && phoneIndex != -1 && villageIndex != -1) {
@@ -86,7 +90,8 @@ public class customer_details_activity extends AppCompatActivity {
                     String name = cursor.getString(nameIndex);
                     String phone = cursor.getString(phoneIndex);
                     String village = cursor.getString(villageIndex);
-                    customerList.add(new customer_recycler_model(id, name, phone, village));
+                    float debt = cursor.getFloat(debtIndex);
+                    customerList.add(new customer_recycler_model(id, name, phone, village,debt));
                 }
             }
             cursor.close();
@@ -180,7 +185,10 @@ public class customer_details_activity extends AppCompatActivity {
         values.put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf");
         values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
 
-        Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+        Uri uri = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+        }
         if (uri != null) {
             try {
                 OutputStream outputStream = getContentResolver().openOutputStream(uri);

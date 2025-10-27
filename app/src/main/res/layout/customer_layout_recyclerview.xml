@@ -10,11 +10,11 @@
     app:cardUseCompatPadding="true">
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/customer_item_root"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="16dp">
 
-        <!-- Customer Name -->
         <TextView
             android:id="@+id/customer_name_textview"
             android:layout_width="0dp"
@@ -27,7 +27,6 @@
             app:layout_constraintTop_toTopOf="parent"
             tools:text="Customer Name" />
 
-        <!-- Customer Phone -->
         <TextView
             android:id="@+id/customer_phone_textview"
             android:layout_width="0dp"
@@ -43,7 +42,6 @@
             app:layout_constraintTop_toBottomOf="@id/customer_name_textview"
             tools:text="123-456-7890" />
 
-        <!-- Customer Village -->
         <TextView
             android:id="@+id/customer_village_textview"
             android:layout_width="0dp"
@@ -58,6 +56,19 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/customer_phone_textview"
             tools:text="Some Village" />
+
+        <TextView
+            android:id="@+id/customer_debt_textview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/customer_village_textview"
+            tools:text="Debt: ₹500.00"
+            tools:textColor="@android:color/holo_red_dark" />
+
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.cardview.widget.CardView>
