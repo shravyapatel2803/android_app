@@ -44,7 +44,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 
-public class Maintain extends AppCompatActivity {
+// --- MODIFIED: Implement the listener interface ---
+public class Maintain extends AppCompatActivity implements item_recycler_adapter_stocks.OnItemStatusChangedListener {
 
     // --- UI Components ---
     Toolbar toolbar;
@@ -88,9 +89,17 @@ public class Maintain extends AppCompatActivity {
     }
 
     private void setupRecyclerView() {
-        adapter = new item_recycler_adapter_stocks(this, filteredList);
+        // --- MODIFIED: Pass the listener (this) to the adapter ---
+        adapter = new item_recycler_adapter_stocks(this, filteredList, this);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
+    }
+
+    // --- NEW: This method is called by the adapter when an item's status changes ---
+    @Override
+    public void onItemStatusChanged() {
+        // Just reload everything from the database to ensure UI is consistent
+        loadItemsFromDB();
     }
 
     private void loadItemsFromDB() {

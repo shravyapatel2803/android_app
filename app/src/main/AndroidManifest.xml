@@ -15,23 +15,23 @@
         <activity
             android:name=".BillHistoryActivity"
             android:exported="false"
-            android:theme="@style/Theme.Custom" />
+            android:theme="@style/Base.Theme.BillGenerator" />
         <activity
             android:name=".customer_details_activity"
             android:exported="false"
-            android:theme="@style/Theme.Custom" />
+            android:theme="@style/Base.Theme.BillGenerator" />
         <activity
             android:name=".Maintain"
             android:exported="false"
-            android:theme="@style/Theme.Custom" />
+            android:theme="@style/Base.Theme.BillGenerator" />
         <activity
             android:name=".BillGenerator"
             android:exported="false"
-            android:theme="@style/Theme.Custom" />
+            android:theme="@style/Base.Theme.BillGenerator" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.Custom">
+            android:theme="@style/Base.Theme.BillGenerator">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

@@ -16,11 +16,11 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.billgenerator.AddItemAdapter;
-import com.example.billgenerator.Item;
+import com.example.billgenerator.adapters.AddItemAdapter;
+import com.example.billgenerator.models.Item;
 import com.example.billgenerator.R;
-import com.example.billgenerator.SelectedItem;
-import com.example.billgenerator.SelectedItemAdapter;
+import com.example.billgenerator.models.SelectedItem;
+import com.example.billgenerator.adapters.SelectedItemAdapter;
 import com.example.billgenerator.database.databaseSystem;
 
 import java.text.NumberFormat;
@@ -143,7 +143,7 @@ public class GenerateBillFragment extends Fragment {
             }
         }
 
-        long billId = dbHelper.insertBill(customerId, goldRate, silverRate, totalAmount, selectedItemsList);
+        long billId = dbHelper.insertBill(customerId, goldRate, silverRate, totalAmount);
 
         if (billId != -1) {
             Toast.makeText(getContext(), "Bill Generated Successfully with ID: " + billId, Toast.LENGTH_LONG).show();

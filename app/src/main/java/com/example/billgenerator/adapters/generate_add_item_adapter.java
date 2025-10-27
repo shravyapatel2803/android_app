@@ -30,7 +30,8 @@ public class generate_add_item_adapter extends RecyclerView.Adapter<generate_add
     Dialog parentDialog;
 
     // Updated Constructor
-    generate_add_item_adapter(Context context, Context mainClass, ArrayList<item_recycler_model_stocks> availableItemsList, ArrayList<item_recycler_model> billItemsList, Dialog parentDialog) {
+    // <-- FIXED: Added 'public' to the constructor
+    public generate_add_item_adapter(Context context, Context mainClass, ArrayList<item_recycler_model_stocks> availableItemsList, ArrayList<item_recycler_model> billItemsList, Dialog parentDialog) {
         this.context = context;
         this.allAvailableItemsList = availableItemsList;
         // Initialize the filtered list with all items

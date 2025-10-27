@@ -8,7 +8,8 @@ import androidx.viewpager2.adapter.FragmentStateAdapter;
 import com.example.billgenerator.fragments.BillHistoryFragment;
 import com.example.billgenerator.fragments.CustomerDetailsFragment;
 import com.example.billgenerator.fragments.StockManagementFragment;
-import com.google.android.material.tabs.GenerateBillFragment;
+// <-- FIXED: Changed this import from com.google.android.material.tabs...
+import com.example.billgenerator.fragments.GenerateBillFragment;
 
 
 public class ViewPagerAdapter extends FragmentStateAdapter {

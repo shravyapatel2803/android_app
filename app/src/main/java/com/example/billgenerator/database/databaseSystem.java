@@ -7,7 +7,12 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
 import java.util.ArrayList;
+import java.util.List;
+
 import android.text.TextUtils;
+
+import com.example.billgenerator.models.Item;
+
 public class databaseSystem extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "my_database.db";
@@ -223,7 +228,7 @@ public class databaseSystem extends SQLiteOpenHelper {
                 "b." + COLUMN_TOTAL_AMOUNT +
                 " FROM " + TABLE_BILLS + " b" +
                 " JOIN " + TABLE_CUSTOMERS + " c ON b." + COLUMN_CUSTOMER_ID + " = c." + COLUMN_ID +
-                " WHERE b." + COLUMN_ID + " = billId"; // <-- Use a placeholder '?'
+                " WHERE b." + COLUMN_ID + " = ?"; // <-- FIXED: Was ' = billId' which is wrong
 
         // Pass the arguments in a separate array
         String[] selectionArgs = { String.valueOf(billId) };
@@ -248,9 +253,54 @@ public class databaseSystem extends SQLiteOpenHelper {
         return db.rawQuery(query, selectionArgs); // <-- Pass the arguments here
     }
 
+   public List<Item> fetchAllItems(){
+        List<Item> itemList = new ArrayList<>();
+       Cursor cursor = this.fetchAllItemsCursor();
+
+       if (cursor != null) {
+           int idCol = cursor.getColumnIndexOrThrow(COLUMN_ID);
+           int nameCol = cursor.getColumnIndexOrThrow(COLUMN_NAME);
+           int weightCol = cursor.getColumnIndexOrThrow(COLUMN_WEIGHT);
+           int typeCol = cursor.getColumnIndexOrThrow(COLUMN_TYPE);
+           int soldCol = cursor.getColumnIndexOrThrow(COLUMN_IS_SOLD);
+
+           while (cursor.moveToNext()) {
+               // We only want to add items that are NOT sold
+               int isSoldInt = cursor.getInt(soldCol);
+               boolean isSold = (isSoldInt == 1);
+
+               if (!isSold) {
+                   int id = cursor.getInt(idCol);
+                   String name = cursor.getString(nameCol);
+                   double weight = cursor.getDouble(weightCol);
+                   String type = cursor.getString(typeCol);
+                   itemList.add(new Item(id, name, weight, type));
+               }
+           }
+           cursor.close();
+       }
+       return itemList;
+   }
+
     public Cursor fetchAllItemsCursor() {
         SQLiteDatabase db = this.getReadableDatabase();
         return db.query(TABLE_ITEMS, null, null, null, null, null, COLUMN_ID + " DESC");
+
+    }
+
+    public long insertOrGetCustomer(String name, String phone, String village) {
+        long customerId = -1;
+        Cursor cursor = getCustomerByPhone(phone);
+
+        if (cursor != null && cursor.moveToFirst()) {
+            // Customer exists, get the ID
+            int idCol = cursor.getColumnIndex(COLUMN_ID);
+            customerId = cursor.getLong(idCol);
+            cursor.close();
+        } else {
+            // Customer doesn't exist, insert a new one
+            customerId = insertCustomer(name, phone, village);
+        }
+        return customerId;
     }
 }
-

@@ -1,5 +1,8 @@
 package com.example.billgenerator.fragments;
 
+// <-- FIXED: NOTE: This file will NOT compile.
+// It requires "Item.java" and "ItemAdapter.java" which are missing from your project.
+
 import android.app.Dialog;
 import android.database.Cursor;
 import android.os.Bundle;
@@ -19,8 +22,8 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.billgenerator.Item;
-import com.example.billgenerator.ItemAdapter;
+import com.example.billgenerator.models.Item;
+import com.example.billgenerator.adapters.ItemAdapter;
 import com.example.billgenerator.R;
 import com.example.billgenerator.database.databaseSystem;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -47,8 +50,10 @@ public class StockManagementFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         dbHelper = new databaseSystem(getContext());
-        recyclerView = view.findViewById(R.id.stock_recycler_view);
-        fab = view.findViewById(R.id.fab_add_item);
+        // <-- FIXED: The ID in your layout is "stock_item_recyclerView", not "stock_recycler_view"
+        recyclerView = view.findViewById(R.id.stock_item_recyclerView);
+        // <-- FIXED: The ID in your layout is "fab_add_stock_item", not "fab_add_item"
+        fab = view.findViewById(R.id.fab_add_stock_item);
 
         setupRecyclerView();
         loadItemsFromDB();

@@ -22,7 +22,8 @@ public class item_recycler_adapter extends RecyclerView.Adapter<item_recycler_ad
     ArrayList<item_recycler_model> billItemsList;
     databaseSystem dbHelper; // Add database helper
 
-    item_recycler_adapter(Context context, ArrayList<item_recycler_model> arrayList) {
+    // <-- FIXED: Added 'public' to the constructor
+    public item_recycler_adapter(Context context, ArrayList<item_recycler_model> arrayList) {
         this.context = context;
         this.billItemsList = arrayList;
         this.dbHelper = new databaseSystem(context); // Initialize

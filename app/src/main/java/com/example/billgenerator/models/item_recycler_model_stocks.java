@@ -5,7 +5,7 @@ public class item_recycler_model_stocks {
     String name;
     double weight;
     String type; // "Gold" or "Silver"
-    boolean isSold; // NEW FIELD
+    public boolean isSold; // NEW FIELD
 
     // Updated Constructor
     public item_recycler_model_stocks(int id, String name, double weight, String type, boolean isSold) {
