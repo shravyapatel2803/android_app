@@ -1,4 +1,4 @@
-package com.example.billgenerator;
+package com.example.billgenerator.adapters;
 
 import android.app.Dialog;
 import android.content.Context;
@@ -10,6 +10,12 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.billgenerator.BillGenerator;
+import com.example.billgenerator.R;
+import com.example.billgenerator.database.databaseSystem;
+import com.example.billgenerator.models.item_recycler_model_stocks;
+import com.example.billgenerator.models.item_recycler_model;
 
 import java.util.ArrayList;
 import java.util.Locale;

@@ -1,4 +1,4 @@
-package com.example.billgenerator;
+package com.example.billgenerator.models;
 
 public class generate_add_item_model {
     String item_name,item_weight,item_type;

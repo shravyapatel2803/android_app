@@ -1,8 +1,7 @@
-package com.example.billgenerator;
+package com.example.billgenerator.adapters;
 
 import android.app.AlertDialog;
 import android.content.Context;
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -10,9 +9,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.billgenerator.R;
+import com.example.billgenerator.database.databaseSystem;
+import com.example.billgenerator.models.item_recycler_model_stocks;
 
 import java.util.ArrayList;
 import java.util.Locale;

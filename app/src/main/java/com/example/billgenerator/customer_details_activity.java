@@ -11,7 +11,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
-import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.Window;
@@ -25,6 +24,9 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.billgenerator.adapters.customer_recycler_adapter;
+import com.example.billgenerator.database.databaseSystem;
+import com.example.billgenerator.models.customer_recycler_model;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.io.IOException;

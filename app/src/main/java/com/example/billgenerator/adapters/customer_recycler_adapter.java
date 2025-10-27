@@ -1,4 +1,4 @@
-package com.example.billgenerator;
+package com.example.billgenerator.adapters;
 
 import android.app.AlertDialog;
 import android.content.Context;
@@ -10,6 +10,11 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.billgenerator.R;
+import com.example.billgenerator.database.databaseSystem;
+import com.example.billgenerator.models.customer_recycler_model;
+
 import java.util.ArrayList;
 
 public class customer_recycler_adapter extends RecyclerView.Adapter<customer_recycler_adapter.ViewHolder> {

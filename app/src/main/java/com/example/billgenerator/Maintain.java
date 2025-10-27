@@ -33,10 +33,11 @@ import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.billgenerator.adapters.item_recycler_adapter_stocks;
+import com.example.billgenerator.database.databaseSystem;
+import com.example.billgenerator.models.item_recycler_model_stocks;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;

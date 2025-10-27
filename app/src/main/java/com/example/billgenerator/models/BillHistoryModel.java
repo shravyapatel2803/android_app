@@ -1,8 +1,8 @@
-package com.example.billgenerator;
+package com.example.billgenerator.models;
 
 public class BillHistoryModel {
-    final int billId;
-    final String customerName;
+    public final int billId;
+    public final String customerName;
     final String billDate;
     final double totalAmount;
 

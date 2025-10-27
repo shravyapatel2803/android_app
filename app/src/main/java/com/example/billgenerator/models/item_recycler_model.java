@@ -1,4 +1,4 @@
-package com.example.billgenerator;
+package com.example.billgenerator.models;
 
 public class item_recycler_model {
     int id;

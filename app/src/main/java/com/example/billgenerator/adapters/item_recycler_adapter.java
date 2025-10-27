@@ -1,4 +1,4 @@
-package com.example.billgenerator;
+package com.example.billgenerator.adapters;
 
 import android.app.AlertDialog;
 import android.content.Context;
@@ -10,6 +10,10 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.billgenerator.R;
+import com.example.billgenerator.database.databaseSystem;
+import com.example.billgenerator.models.item_recycler_model;
 
 import java.util.ArrayList;
 

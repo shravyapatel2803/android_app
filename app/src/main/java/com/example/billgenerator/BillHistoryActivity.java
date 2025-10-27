@@ -22,6 +22,10 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.billgenerator.adapters.BillHistoryAdapter;
+import com.example.billgenerator.database.databaseSystem;
+import com.example.billgenerator.models.BillHistoryModel;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.text.NumberFormat;

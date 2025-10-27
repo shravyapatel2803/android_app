@@ -1,19 +1,18 @@
-package com.example.billgenerator;
+package com.example.billgenerator.adapters;
 
-import android.app.Dialog;
 import android.content.Context;
-import android.database.Cursor;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.billgenerator.R;
+import com.example.billgenerator.database.databaseSystem;
+import com.example.billgenerator.models.BillHistoryModel;
 
 import java.text.NumberFormat;
 import java.text.ParseException;

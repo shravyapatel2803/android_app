@@ -19,6 +19,12 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.billgenerator.adapters.generate_add_item_adapter;
+import com.example.billgenerator.adapters.item_recycler_adapter;
+import com.example.billgenerator.database.databaseSystem;
+import com.example.billgenerator.models.item_recycler_model;
+import com.example.billgenerator.models.item_recycler_model_stocks;
+
 import java.util.ArrayList;
 import java.util.Locale;
 

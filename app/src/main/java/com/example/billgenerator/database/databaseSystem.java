@@ -1,4 +1,4 @@
-package com.example.billgenerator;
+package com.example.billgenerator.database;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -246,6 +246,11 @@ public class databaseSystem extends SQLiteOpenHelper {
         String[] selectionArgs = { String.valueOf(billId) };
 
         return db.rawQuery(query, selectionArgs); // <-- Pass the arguments here
+    }
+
+    public Cursor fetchAllItemsCursor() {
+        SQLiteDatabase db = this.getReadableDatabase();
+        return db.query(TABLE_ITEMS, null, null, null, null, null, COLUMN_ID + " DESC");
     }
 }
 
