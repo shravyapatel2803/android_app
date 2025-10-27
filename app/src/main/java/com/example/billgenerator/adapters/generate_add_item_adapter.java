@@ -12,9 +12,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment; // <-- Import Fragment
 import androidx.recyclerview.widget.RecyclerView;
-
-// <-- Removed BillGenerator import -->
-// import com.example.billgenerator.BillGenerator;
 import com.example.billgenerator.R;
 import com.example.billgenerator.database.databaseSystem;
 import com.example.billgenerator.models.item_recycler_model_stocks;
@@ -48,12 +45,13 @@ public class generate_add_item_adapter extends RecyclerView.Adapter<generate_add
                                      Dialog parentDialog) {
         this.context = context;
         this.parentFragment = fragment; // <-- Store Fragment reference
+        // Use copies to avoid modifying original lists directly if passed by reference elsewhere
         this.allAvailableItemsList = new ArrayList<>(availableItemsList); // Use a copy for source
         this.filteredAvailableItemsList = new ArrayList<>(availableItemsList); // Initialize filtered list
         this.billItemsList = billItemsList; // <-- Store reference to bill's item list
         this.dbHelper = new databaseSystem(context);
         this.parentDialog = parentDialog;
-        Log.d(TAG, "Adapter created. Available items: " + availableItemsList.size());
+        Log.d(TAG, "Adapter created. Available items source: " + this.allAvailableItemsList.size());
     }
 
     @NonNull
@@ -72,8 +70,8 @@ public class generate_add_item_adapter extends RecyclerView.Adapter<generate_add
 
         holder.itemName.setText(model.getName());
         holder.itemWeight.setText(String.format(Locale.getDefault(), "%.3f g", model.getWeight()));
-        // Assuming item_layout_recyclerview has these views (from previous code)
-        // holder.itemIcon.setImageResource(...) based on type
+        // TODO: Add logic for itemIcon and soldIconOverlay if they exist in item_layout_recyclerview
+        // e.g., holder.itemIcon.setImageResource(model.getType().equalsIgnoreCase("Gold") ? R.drawable.ic_gold_ingot : R.drawable.ic_silver_bar);
         // holder.soldIconOverlay.setVisibility(View.GONE); // Should always be hidden here
 
         // --- Click Listener to Add Item ---
@@ -85,7 +83,15 @@ public class generate_add_item_adapter extends RecyclerView.Adapter<generate_add
             }
 
             // Get the selected item *from the filtered list*
-            item_recycler_model_stocks selectedItem = filteredAvailableItemsList.get(currentPosition);
+            // Use try-catch for safety in case list changes unexpectedly
+            item_recycler_model_stocks selectedItem;
+            try {
+                selectedItem = filteredAvailableItemsList.get(currentPosition);
+            } catch (IndexOutOfBoundsException e) {
+                Log.e(TAG, "IndexOutOfBoundsException getting item at position: " + currentPosition);
+                return; // Cannot proceed
+            }
+
             Log.d(TAG, "Item clicked: ID=" + selectedItem.getId() + ", Name=" + selectedItem.getName());
 
             // --- Prevent Adding Duplicates to the Current Bill ---
@@ -109,15 +115,13 @@ public class generate_add_item_adapter extends RecyclerView.Adapter<generate_add
 
 
             // 2. Update the BillFragment's RecyclerView
-            // Use the parentFragment reference to find the view
             if (parentFragment != null && parentFragment.getView() != null) {
                 RecyclerView billRecyclerView = parentFragment.getView().findViewById(R.id.item_recycler_view);
                 if (billRecyclerView != null && billRecyclerView.getAdapter() != null) {
-                    // Notify the adapter associated with R.id.item_recycler_view (SelectedItemAdapter)
                     billRecyclerView.getAdapter().notifyItemInserted(billItemsList.size() - 1);
                     Log.d(TAG, "Notified bill's RecyclerView adapter (item inserted).");
                 } else {
-                    Log.w(TAG, "Could not find bill's RecyclerView (R.id.item_recycler_view) or its adapter in the fragment.");
+                    Log.w(TAG, "Could not find bill's RecyclerView (R.id.item_recycler_view) or its adapter.");
                 }
             } else {
                 Log.e(TAG, "Parent fragment or its view is null. Cannot update bill RecyclerView.");
@@ -130,24 +134,39 @@ public class generate_add_item_adapter extends RecyclerView.Adapter<generate_add
             Toast.makeText(context, selectedItem.getName() + " added to bill.", Toast.LENGTH_SHORT).show();
 
             // 4. IMPORTANT: Remove the item from *this adapter's lists* (filtered and source)
-            // Remove from the source list first
-            allAvailableItemsList.remove(selectedItem);
-            // Remove from the filtered list (the one being displayed)
+            // It's critical to remove the correct object from the source list.
+            boolean removedFromSource = false;
+            // Iterate source list to find the matching object by ID (safer than relying on object equality if objects were recreated)
+            item_recycler_model_stocks itemToRemoveFromSource = null;
+            for(item_recycler_model_stocks sourceItem : allAvailableItemsList) {
+                if(sourceItem.getId() == selectedItem.getId()) {
+                    itemToRemoveFromSource = sourceItem;
+                    break;
+                }
+            }
+            if (itemToRemoveFromSource != null) {
+                removedFromSource = allAvailableItemsList.remove(itemToRemoveFromSource);
+            }
+
+            // Also remove from the currently displayed list by position
             filteredAvailableItemsList.remove(currentPosition);
+
             // Notify this adapter (generate_add_item_adapter) that the item was removed
             notifyItemRemoved(currentPosition);
-            Log.d(TAG, "Removed item ID " + selectedItem.getId() + " from adapter lists.");
+            // Optional: If positions shift, might need notifyItemRangeChanged
+            // notifyItemRangeChanged(currentPosition, filteredAvailableItemsList.size());
+
+            Log.d(TAG, "Removed item ID " + selectedItem.getId() + " from adapter lists. Removed from source: " + removedFromSource);
 
 
-            // 5. Check if the dialog should be dismissed (optional)
-            // If filtering is active, lists might become empty temporarily.
-            // Consider dismissing only if the *source* list (allAvailableItemsList) is empty.
+            // 5. Check if the dialog should be dismissed
             if (allAvailableItemsList.isEmpty()) {
                 Log.d(TAG, "All available items added, dismissing dialog.");
-                parentDialog.dismiss();
+                if (parentDialog != null && parentDialog.isShowing()) {
+                    parentDialog.dismiss();
+                }
             } else if (filteredAvailableItemsList.isEmpty()){
-                // Maybe show a "No matching items" message instead of dismissing?
-                Log.d(TAG, "Filtered list is empty, but source list is not. Dialog remains open.");
+                Log.d(TAG, "Filtered list is empty, source list size: " + allAvailableItemsList.size());
                 Toast.makeText(context, "No more items match search.", Toast.LENGTH_SHORT).show();
             }
         });
@@ -155,21 +174,23 @@ public class generate_add_item_adapter extends RecyclerView.Adapter<generate_add
 
     @Override
     public int getItemCount() {
-        // The adapter should only count the items in the filtered list
+        // Count items in the currently displayed (filtered) list
         return filteredAvailableItemsList.size();
     }
 
-    // --- Filter Method (Unchanged) ---
+    // --- Filter Method ---
     public void filter(String text) {
         Log.d(TAG, "Filtering list with text: '" + text + "'");
-        filteredAvailableItemsList.clear();
-        if (text == null || text.isEmpty()) {
+        filteredAvailableItemsList.clear(); // Clear the displayed list
+        String searchText = (text == null) ? "" : text.toLowerCase(Locale.getDefault());
+
+        if (searchText.isEmpty()) {
+            // If search is empty, show all items from the source list
             filteredAvailableItemsList.addAll(allAvailableItemsList);
             Log.d(TAG, "Filter empty, showing all " + allAvailableItemsList.size() + " available items.");
         } else {
-            String searchText = text.toLowerCase(Locale.getDefault());
+            // Otherwise, iterate through the source list and add matches
             for (item_recycler_model_stocks item : allAvailableItemsList) {
-                // Search by item name or type
                 if (item.getName().toLowerCase(Locale.getDefault()).contains(searchText) ||
                         item.getType().toLowerCase(Locale.getDefault()).contains(searchText)) {
                     filteredAvailableItemsList.add(item);
@@ -177,18 +198,19 @@ public class generate_add_item_adapter extends RecyclerView.Adapter<generate_add
             }
             Log.d(TAG, "Filter applied, showing " + filteredAvailableItemsList.size() + " matching items.");
         }
-        // Notify the adapter that the dataset (filteredAvailableItemsList) has changed
         notifyDataSetChanged();
+        // Notify the adapter that the displayed list has changed
     }
 
     // --- ViewHolder ---
-    // Ensure IDs match item_layout_recyclerview.xml
     public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView itemName, itemWeight;
-        // ImageView itemIcon, soldIconOverlay; // Add if these exist in the layout
+        // Add ImageView references if they exist in item_layout_recyclerview.xml
+        // ImageView itemIcon, soldIconOverlay;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
+            // Ensure these IDs exist in R.layout.item_layout_recyclerview
             itemName = itemView.findViewById(R.id.item_name_textview);
             itemWeight = itemView.findViewById(R.id.item_weight_textview);
             // itemIcon = itemView.findViewById(R.id.item_icon);

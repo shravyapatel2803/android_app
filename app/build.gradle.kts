@@ -45,4 +45,5 @@ dependencies {
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
     annotationProcessor(libs.room.compiler)
+    implementation("androidx.biometric:biometric:1.1.0") // Or the latest stable version
 }
