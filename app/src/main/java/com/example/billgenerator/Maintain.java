@@ -90,17 +90,12 @@ public class Maintain extends AppCompatActivity implements item_recycler_adapter
 
     private void setupRecyclerView() {
         // --- MODIFIED: Pass the listener (this) to the adapter ---
-        adapter = new item_recycler_adapter_stocks(this, filteredList, this);
+        adapter = new item_recycler_adapter_stocks(this, filteredList);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
     }
 
     // --- NEW: This method is called by the adapter when an item's status changes ---
-    @Override
-    public void onItemStatusChanged() {
-        // Just reload everything from the database to ensure UI is consistent
-        loadItemsFromDB();
-    }
 
     private void loadItemsFromDB() {
         allItemsList.clear();

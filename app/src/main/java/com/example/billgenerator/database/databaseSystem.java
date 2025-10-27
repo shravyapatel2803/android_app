@@ -288,19 +288,56 @@ public class databaseSystem extends SQLiteOpenHelper {
 
     }
 
-    public long insertOrGetCustomer(String name, String phone, String village) {
-        long customerId = -1;
-        Cursor cursor = getCustomerByPhone(phone);
+    // --- ADD THIS METHOD INSIDE your databaseSystem.java class ---
 
-        if (cursor != null && cursor.moveToFirst()) {
-            // Customer exists, get the ID
-            int idCol = cursor.getColumnIndex(COLUMN_ID);
-            customerId = cursor.getLong(idCol);
-            cursor.close();
-        } else {
-            // Customer doesn't exist, insert a new one
-            customerId = insertCustomer(name, phone, village);
+    /**
+     * Finds a customer by phone number. If found, updates name/village and returns ID.
+     * If not found, inserts a new customer and returns the new ID.
+     * Returns -1 on error.
+     */
+    public long insertOrGetCustomer(String name, String phone, String village) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        long customerId = -1;
+        Cursor cursor = null;
+
+        try {
+            // Check if customer exists by phone number
+            cursor = db.query(TABLE_CUSTOMERS,
+                    new String[]{COLUMN_ID}, // Select only the ID column
+                    COLUMN_PHONE + " = ?",    // WHERE phone = ?
+                    new String[]{phone},     // Argument for the placeholder
+                    null, null, null, "1"); // Limit 1
+
+            if (cursor != null && cursor.moveToFirst()) {
+                // Customer exists - get their ID
+                int idIndex = cursor.getColumnIndex(COLUMN_ID);
+                if (idIndex != -1) {
+                    customerId = cursor.getLong(idIndex);
+                }
+            }
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
         }
-        return customerId;
+
+        // Now, get a writable database for potential insert/update
+        db = this.getWritableDatabase();
+        if (customerId != -1) {
+            // Customer exists, update their name and village (phone is the key)
+            ContentValues updateValues = new ContentValues();
+            updateValues.put(COLUMN_NAME, name);
+            updateValues.put(COLUMN_VILLAGE, village);
+            db.update(TABLE_CUSTOMERS, updateValues, COLUMN_ID + " = ?", new String[]{String.valueOf(customerId)});
+            return customerId; // Return existing ID
+        } else {
+            // Customer does not exist, insert new record
+            ContentValues insertValues = new ContentValues();
+            insertValues.put(COLUMN_NAME, name);
+            insertValues.put(COLUMN_PHONE, phone);
+            insertValues.put(COLUMN_VILLAGE, village);
+            return db.insert(TABLE_CUSTOMERS, null, insertValues); // Return new ID (or -1 if insert fails)
+        }
     }
+    // --- END OF METHOD TO ADD ---
 }

@@ -1,8 +1,5 @@
 package com.example.billgenerator.fragments;
 
-// <-- FIXED: NOTE: This file will NOT compile.
-// It requires "Item.java" and "ItemAdapter.java" which are missing from your project.
-
 import android.app.Dialog;
 import android.database.Cursor;
 import android.os.Bundle;
@@ -22,26 +19,35 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.billgenerator.models.Item;
-import com.example.billgenerator.adapters.ItemAdapter;
+// <-- FIXED: Removed unused Item and ItemAdapter imports
+// import com.example.billgenerator.Item;
+// import com.example.billgenerator.ItemAdapter;
 import com.example.billgenerator.R;
 import com.example.billgenerator.database.databaseSystem;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+// <-- FIXED: Import the correct adapter and model
+import com.example.billgenerator.adapters.item_recycler_adapter_stocks;
+import com.example.billgenerator.models.item_recycler_model_stocks;
+
+
 import java.util.ArrayList;
-import java.util.List;
+import java.util.List; // Keep List if needed, but ArrayList is used
 
 public class StockManagementFragment extends Fragment {
 
     private RecyclerView recyclerView;
-    private ItemAdapter adapter;
-    private List<Item> itemList = new ArrayList<>();
+    // <-- FIXED: Changed adapter type
+    private item_recycler_adapter_stocks adapter;
+    // <-- FIXED: Changed list type to use the model that includes 'isSold'
+    private ArrayList<item_recycler_model_stocks> itemList = new ArrayList<>();
     private databaseSystem dbHelper;
     private FloatingActionButton fab;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        // Inflate the correct layout for stock management
         return inflater.inflate(R.layout.activity_maintain, container, false);
     }
 
@@ -50,41 +56,55 @@ public class StockManagementFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         dbHelper = new databaseSystem(getContext());
-        // <-- FIXED: The ID in your layout is "stock_item_recyclerView", not "stock_recycler_view"
+        // IDs were corrected previously, ensure they match activity_maintain.xml
         recyclerView = view.findViewById(R.id.stock_item_recyclerView);
-        // <-- FIXED: The ID in your layout is "fab_add_stock_item", not "fab_add_item"
         fab = view.findViewById(R.id.fab_add_stock_item);
 
         setupRecyclerView();
-        loadItemsFromDB();
+        loadItemsFromDB(); // Load initial data
 
         fab.setOnClickListener(v -> showAddItemDialog());
     }
 
     private void setupRecyclerView() {
-        adapter = new ItemAdapter(itemList);
+        // <-- FIXED: Initialize with the correct adapter, passing the itemList
+        adapter = new item_recycler_adapter_stocks(requireContext(), itemList);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         recyclerView.setAdapter(adapter);
     }
 
     private void loadItemsFromDB() {
-        itemList.clear();
-        Cursor cursor = dbHelper.fetchAllItemsCursor();
+        itemList.clear(); // Clear the list before loading
+        // <-- FIXED: Use fetchItems cursor, which includes is_sold
+        Cursor cursor = dbHelper.fetchItems();
         if (cursor != null) {
+            // Get column indices once
+            int idCol = cursor.getColumnIndexOrThrow("id");
+            int nameCol = cursor.getColumnIndexOrThrow("name");
+            int weightCol = cursor.getColumnIndexOrThrow("weight");
+            int typeCol = cursor.getColumnIndexOrThrow("type");
+            int soldCol = cursor.getColumnIndexOrThrow("is_sold"); // Make sure this column exists
+
             while (cursor.moveToNext()) {
-                int id = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
-                String name = cursor.getString(cursor.getColumnIndexOrThrow("name"));
-                double weight = cursor.getDouble(cursor.getColumnIndexOrThrow("weight"));
-                String type = cursor.getString(cursor.getColumnIndexOrThrow("type"));
-                itemList.add(new Item(id, name, weight, type));
+                int id = cursor.getInt(idCol);
+                String name = cursor.getString(nameCol);
+                double weight = cursor.getDouble(weightCol);
+                String type = cursor.getString(typeCol);
+                // <-- FIXED: Read the is_sold status correctly
+                boolean isSold = cursor.getInt(soldCol) == 1;
+
+                // <-- FIXED: Add the correct model type to the list
+                itemList.add(new item_recycler_model_stocks(id, name, weight, type, isSold));
             }
             cursor.close();
         }
+        // Notify the adapter that data has changed
         if (adapter != null) {
             adapter.notifyDataSetChanged();
         }
     }
 
+    // showAddItemDialog remains the same as it correctly inserts into the DB
     private void showAddItemDialog() {
         final Dialog dialog = new Dialog(requireContext());
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -106,24 +126,31 @@ public class StockManagementFragment extends Fragment {
             try {
                 double weight = Double.parseDouble(weightStr);
                 int selectedTypeId = typeGroup.getCheckedRadioButtonId();
+                if (selectedTypeId == -1) { // No radio button selected
+                    Toast.makeText(getContext(), "Please select item type (Gold/Silver)", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 RadioButton selectedType = dialog.findViewById(selectedTypeId);
                 String type = selectedType.getText().toString();
 
+                // Insert with isSold = false by default
                 dbHelper.insertItem(name, weight, type, false);
                 Toast.makeText(getContext(), "Item saved!", Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
-                loadItemsFromDB(); // Refresh the list
+                loadItemsFromDB(); // Refresh the list in the RecyclerView
             } catch (NumberFormatException e) {
-                Toast.makeText(getContext(), "Invalid weight", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "Invalid weight format", Toast.LENGTH_SHORT).show();
             }
         });
 
         dialog.show();
     }
 
+    // Refresh data when the fragment becomes visible again
     @Override
     public void onResume() {
         super.onResume();
+        // Reload data from DB in case changes were made elsewhere
         if (dbHelper != null) {
             loadItemsFromDB();
         }

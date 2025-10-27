@@ -9,8 +9,10 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.billgenerator.models.Item;
+// <-- FIXED: Added import for databaseSystem
 import com.example.billgenerator.R;
+import com.example.billgenerator.database.databaseSystem;
+import com.example.billgenerator.models.Item;
 
 import java.util.List;
 import java.util.Locale;
@@ -28,6 +30,7 @@ public class AddItemAdapter extends RecyclerView.Adapter<AddItemAdapter.ViewHold
     private List<Item> allItems;
     private OnItemClickListener listener;
     private Context context;
+    private databaseSystem dbHelper; // <-- FIXED: Added dbHelper instance
 
     public AddItemAdapter(List<Item> allItems, OnItemClickListener listener) {
         this.allItems = allItems;
@@ -38,6 +41,8 @@ public class AddItemAdapter extends RecyclerView.Adapter<AddItemAdapter.ViewHold
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         this.context = parent.getContext();
+        // <-- FIXED: Initialize dbHelper here
+        this.dbHelper = new databaseSystem(context);
         // Use the same layout as the stock management list
         View view = LayoutInflater.from(context).inflate(R.layout.item_layout_recyclerview, parent, false);
         return new ViewHolder(view);
@@ -62,7 +67,17 @@ public class AddItemAdapter extends RecyclerView.Adapter<AddItemAdapter.ViewHold
         // Set the click listener for the whole item view
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
+                // <-- FIXED: Mark the item as sold in the database BEFORE calling the listener
+                dbHelper.updateItemSoldStatus(item.getId(), true);
                 listener.onItemClick(item);
+
+                // <-- FIXED: Remove the item from the adapter's list immediately
+                // This prevents adding the same item twice before the dialog closes
+                int currentPosition = holder.getBindingAdapterPosition();
+                if (currentPosition != RecyclerView.NO_POSITION) {
+                    allItems.remove(currentPosition);
+                    notifyItemRemoved(currentPosition);
+                }
             }
         });
     }
