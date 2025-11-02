@@ -21,7 +21,6 @@ The Bill Generator is an Android application designed to streamline the process 
 * An Android device or emulator
 
 ### Installation
-
 1.  **Clone the repository:**
     ```bash
     git clone [https://github.com/your-username/android_app.git](https://github.com/your-username/android_app.git)
@@ -30,11 +29,5 @@ The Bill Generator is an Android application designed to streamline the process 
     Open the cloned project in Android Studio.
 3.  **Build and Run:**
     Build the project and run it on an Android device or emulator.
-
-## Dependencies
-
-* [List of dependencies used in the project]
-
----
 
 Feel free to modify and expand upon this template to better suit your project's specific needs. You can add more sections, such as "Usage," "Contributing," or "License," as needed.
