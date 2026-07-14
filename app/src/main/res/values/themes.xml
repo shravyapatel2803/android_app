@@ -1,0 +1,50 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Base.Theme.BillGenerator" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/jewells_navy_light</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/jewells_navy_container</item>
+        <item name="colorOnPrimaryContainer">@color/jewells_on_navy_container</item>
+
+        <item name="colorSecondary">@color/jewells_gold</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="colorSecondaryContainer">@color/jewells_gold_container</item>
+        <item name="colorOnSecondaryContainer">@color/jewells_on_gold_container</item>
+
+        <item name="colorTertiary">@color/jewells_gold_light</item>
+        <item name="colorOnTertiary">@color/jewells_on_gold_container</item>
+        <item name="colorTertiaryContainer">@color/jewells_gold_container</item>
+        <item name="colorOnTertiaryContainer">@color/jewells_on_gold_container</item>
+
+        <item name="colorSurface">@color/jewells_surface</item>
+        <item name="colorOnSurface">@color/jewells_on_surface</item>
+        <item name="colorSurfaceVariant">@color/jewells_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/jewells_on_surface_variant</item>
+        <item name="colorOutline">@color/jewells_outline</item>
+
+        <item name="android:colorBackground">@color/jewells_surface</item>
+        <item name="android:windowBackground">@color/jewells_surface</item>
+        <item name="android:navigationBarColor">@color/jewells_surface</item>
+
+        <item name="android:statusBarColor">@color/jewells_navy_light</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+    </style>
+
+    <style name="Theme.BillGenerator" parent="Base.Theme.BillGenerator" />
+
+    <style name="Animation.Dialog" parent="@android:style/Animation.Dialog">
+        <item name="android:windowEnterAnimation">@anim/dialog_enter</item>
+        <item name="android:windowExitAnimation">@anim/dialog_exit</item>
+    </style>
+
+    <style name="Widget.Jewells.Card" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">2dp</item>
+        <item name="strokeColor">?attr/colorOutline</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <style name="Widget.Jewells.Button.Primary" parent="Widget.Material3.Button.ElevatedButton">
+        <item name="backgroundTint">?attr/colorSecondary</item>
+        <item name="android:textColor">?attr/colorOnSecondary</item>
+    </style>
+</resources>

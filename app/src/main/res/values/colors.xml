@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="grey">#FF808080</color>
+    <color name="red">#FFFF0000</color>
+    <color name="green">#FF00FF00</color>
+    <color name="blue">#FF0000FF</color>
+    <color name="yellow">#FFFFEB3B</color>
+    <color name="orange">#FFFF7043</color>
+    <color name="purple">#FF800080</color>
+    <color name="pink">#FFFF4800</color>
+    <color name="brown">#FF8B4513</color>
+    <color name="teal">#FF008080</color>
+    <color name="moreblue">#2196F3</color>
+    <color name="blue_dark">#1976D2</color>
+
+    <!-- Jewells Manager — Premium Navy & Gold palette -->
+    <color name="jewells_navy">#0B1F3A</color>
+    <color name="jewells_navy_light">#123A63</color>
+    <color name="jewells_navy_container">#D8E6F7</color>
+    <color name="jewells_on_navy_container">#07223D</color>
+
+    <color name="jewells_gold">#C78B2A</color>
+    <color name="jewells_gold_light">#E0B360</color>
+    <color name="jewells_gold_container">#FAE3BF</color>
+    <color name="jewells_on_gold_container">#3D2500</color>
+
+    <color name="jewells_surface">#F7F9FC</color>
+    <color name="jewells_surface_variant">#DCE3EA</color>
+    <color name="jewells_on_surface">#18212B</color>
+    <color name="jewells_on_surface_variant">#4A5568</color>
+    <color name="jewells_outline">#A9B4C2</color>
+
+    <color name="jewells_gradient_start">#EEF4FB</color>
+    <color name="jewells_gradient_center">#E3ECF7</color>
+    <color name="jewells_gradient_end">#D8E4F2</color>
+
+    <!-- Legacy aliases kept for compatibility -->
+    <color name="teal_primary">#004D40</color>
+    <color name="teal_dark">#00251A</color>
+    <color name="gold_text">#FFD700</color>
+
+    <color name="md_theme_primary">@color/jewells_navy_light</color>
+    <color name="md_theme_onPrimary">@color/white</color>
+    <color name="md_theme_primaryContainer">@color/jewells_navy_container</color>
+    <color name="md_theme_onPrimaryContainer">@color/jewells_on_navy_container</color>
+
+    <color name="md_theme_secondary">@color/jewells_gold</color>
+    <color name="md_theme_onSecondary">@color/white</color>
+    <color name="md_theme_secondaryContainer">@color/jewells_gold_container</color>
+    <color name="md_theme_onSecondaryContainer">@color/jewells_on_gold_container</color>
+
+    <color name="md_theme_background">@color/jewells_surface</color>
+    <color name="md_theme_onBackground">@color/jewells_on_surface</color>
+    <color name="md_theme_surface">@color/jewells_surface</color>
+    <color name="md_theme_onSurface">@color/jewells_on_surface</color>
+</resources>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="jewells_navy">#6FA8DC</color>
+    <color name="jewells_navy_light">#8BBFE8</color>
+    <color name="jewells_navy_container">#17344D</color>
+    <color name="jewells_on_navy_container">#D8E9F9</color>
+
+    <color name="jewells_gold">#E0B360</color>
+    <color name="jewells_gold_light">#F0C878</color>
+    <color name="jewells_gold_container">#4A360E</color>
+    <color name="jewells_on_gold_container">#FFEBC4</color>
+
+    <color name="jewells_surface">#161D25</color>
+    <color name="jewells_surface_variant">#24303C</color>
+    <color name="jewells_on_surface">#E7EEF6</color>
+    <color name="jewells_on_surface_variant">#B7C2CD</color>
+    <color name="jewells_outline">#526273</color>
+
+    <color name="jewells_gradient_start">#0F141A</color>
+    <color name="jewells_gradient_center">#121922</color>
+    <color name="jewells_gradient_end">#161D25</color>
+</resources>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="app_drawer_width">304dp</dimen>
+    <dimen name="debt_screen_padding">12dp</dimen>
+    <dimen name="debt_header_corner">16dp</dimen>
+    <dimen name="debt_list_corner">14dp</dimen>
+    <dimen name="debt_header_padding">12dp</dimen>
+</resources>

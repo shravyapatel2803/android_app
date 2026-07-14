@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="135"
+        android:centerColor="@color/jewells_gradient_center"
+        android:endColor="@color/jewells_gradient_end"
+        android:startColor="@color/jewells_gradient_start"
+        android:type="linear" />
+</shape>

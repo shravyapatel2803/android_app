@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24.0"
+    android:viewportHeight="24.0">
+
+    <!-- Main body of the gold bar -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M3,8l2,-2l14,0l2,2l0,8l-2,2l-14,0l-2,-2z" />
+
+    <!-- Top highlight of the gold bar -->
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M5,6L19,6L17.6,8L6.4,8z" />
+
+    <!-- Side highlight to give a 3D effect -->
+    <path
+        android:fillColor="#FFA000"
+        android:pathData="M19,6l-2,2l0,8l2,-2z" />
+
+</vector>

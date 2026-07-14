@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_dashboard"
+            android:icon="@android:drawable/ic_menu_view"
+            android:title="Dashboard" />
+        <item
+            android:id="@+id/nav_generate_bill"
+            android:icon="@android:drawable/ic_menu_edit"
+            android:title="Generate Bill" />
+        <item
+            android:id="@+id/nav_bill_history"
+            android:icon="@android:drawable/ic_menu_recent_history"
+            android:title="Bill History" />
+        <item
+            android:id="@+id/nav_customers"
+            android:icon="@android:drawable/ic_menu_myplaces"
+            android:title="Customers" />
+        <item
+            android:id="@+id/nav_stock"
+            android:icon="@android:drawable/ic_menu_sort_by_size"
+            android:title="Stock" />
+        <item
+            android:id="@+id/nav_notifications"
+            android:icon="@android:drawable/ic_dialog_info"
+            android:title="Notifications" />
+        <item
+            android:id="@+id/nav_stats"
+            android:icon="@android:drawable/ic_menu_week"
+            android:title="Stats" />
+        <item
+            android:id="@+id/nav_debt_customers"
+            android:icon="@android:drawable/ic_menu_agenda"
+            android:title="Debt Customers" />
+        <item
+            android:id="@+id/nav_collection_mode"
+            android:icon="@android:drawable/ic_menu_mylocation"
+            android:title="Collection Mode" />
+        <item
+            android:id="@+id/nav_shop_profile"
+            android:icon="@android:drawable/ic_menu_manage"
+            android:title="Shop Profile" />
+        <item
+            android:id="@+id/nav_suppliers"
+            android:icon="@android:drawable/ic_menu_share"
+            android:title="Suppliers" />
+    </group>
+
+</menu>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_search"
+        android:icon="@android:drawable/ic_menu_search"
+        android:title="Search"
+        app:actionViewClass="androidx.appcompat.widget.SearchView"
+        app:showAsAction="ifRoom|collapseActionView" />
+
+    <item
+        android:id="@+id/action_generate_simple_pdf"
+        android:icon="@android:drawable/ic_menu_save"
+        android:title="Save Summary PDF"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_generate_detailed_pdf"
+        android:icon="@android:drawable/ic_menu_agenda" android:title="Save Detailed PDF"
+        app:showAsAction="ifRoom" />
+</menu>
