@@ -22,11 +22,16 @@ import com.example.billgenerator.models.item_recycler_model_stocks;
 import java.util.ArrayList;
 import java.util.Locale;
 
+import com.example.billgenerator.database.databaseSystem;
+import android.os.Handler;
+import android.os.Looper;
+
 public class item_recycler_adapter_stocks extends RecyclerView.Adapter<item_recycler_adapter_stocks.ViewHolder> {
     Context context;
     ArrayList<item_recycler_model_stocks> itemList;
     databaseSystem dbHelper;
     Fragment parentFragment;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public item_recycler_adapter_stocks(Context context, ArrayList<item_recycler_model_stocks> itemList, Fragment fragment) {
         this.context = context;
@@ -82,10 +87,14 @@ public class item_recycler_adapter_stocks extends RecyclerView.Adapter<item_recy
                     .setTitle("Update Status")
                     .setMessage(message)
                     .setPositiveButton("Yes", (dialog, which) -> {
-                        dbHelper.updateItemSoldStatus(model.getId(), newSoldStatus);
-                        model.isSold = newSoldStatus;
-                        notifyItemChanged(holder.getBindingAdapterPosition());
-                        Toast.makeText(context, "Status Updated", Toast.LENGTH_SHORT).show();
+                        databaseSystem.databaseExecutor.execute(() -> {
+                            dbHelper.updateItemSoldStatus(model.getId(), newSoldStatus);
+                            mainHandler.post(() -> {
+                                model.isSold = newSoldStatus;
+                                notifyItemChanged(holder.getBindingAdapterPosition());
+                                Toast.makeText(context, "Status Updated", Toast.LENGTH_SHORT).show();
+                            });
+                        });
                     })
                     .setNegativeButton("No", null)
                     .show();
@@ -98,11 +107,18 @@ public class item_recycler_adapter_stocks extends RecyclerView.Adapter<item_recy
                     .setTitle("Delete Item")
                     .setMessage("Are you sure you want to delete this item?")
                     .setPositiveButton("Yes", (dialog, which) -> {
-                        dbHelper.deleteItem(model.getId());
-                        itemList.remove(position);
-                        notifyItemRemoved(position);
-                        notifyItemRangeChanged(position, itemList.size());
-                        Toast.makeText(context, "Item Deleted", Toast.LENGTH_SHORT).show();
+                        databaseSystem.databaseExecutor.execute(() -> {
+                            dbHelper.deleteItem(model.getId());
+                            mainHandler.post(() -> {
+                                int pos = holder.getBindingAdapterPosition();
+                                if (pos != RecyclerView.NO_POSITION) {
+                                    itemList.remove(pos);
+                                    notifyItemRemoved(pos);
+                                    notifyItemRangeChanged(pos, itemList.size());
+                                    Toast.makeText(context, "Item Deleted", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        });
                     })
                     .setNegativeButton("No", null)
                     .show();

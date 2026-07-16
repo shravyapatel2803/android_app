@@ -715,7 +715,16 @@ public class BillHistoryFragment extends Fragment {
     }
 
 
-    // Refreshes data when the fragment becomes visible again
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        recyclerView = null;
+        billHistoryEmpty = null;
+        totalSalesText = null;
+        totalCollectedText = null;
+        adapter = null;
+    }
+
     @Override
     public void onResume() {
         super.onResume();

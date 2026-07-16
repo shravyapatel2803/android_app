@@ -54,11 +54,25 @@ public class PdfUtils {
             double gstPercent = billCursor.getDouble(billCursor.getColumnIndexOrThrow("gst_percent"));
             String paymentMode = billCursor.getString(billCursor.getColumnIndexOrThrow("payment_mode"));
 
-            // Correct logic: Only use Professional layout if GST > 0
-            boolean isGstBill = gstPercent > 0.001;
+            // Load font size and PDF language from settings
+            SharedPreferences settingsPrefs = context.getSharedPreferences("app_settings_prefs", Context.MODE_PRIVATE);
+            String pdfLang = settingsPrefs.getString("pdf_language", "English");
+            
+            // Set locale for formatting and strings based on selection
+            Locale pdfLocale = new Locale("en");
+            if ("Hindi".equals(pdfLang)) pdfLocale = new Locale("hi");
+            else if ("Gujarati".equals(pdfLang)) pdfLocale = new Locale("gu");
+            
+            // Update context configuration for resource retrieval
+            android.content.res.Configuration config = new android.content.res.Configuration(context.getResources().getConfiguration());
+            config.setLocale(pdfLocale);
+            Context pdfContext = context.createConfigurationContext(config);
+
+            // NEW LOGIC: Use Professional/GST layout if Online/UPI is selected OR GST is applied
+            boolean isGstBill = (gstPercent > 0.001) || "Online / UPI".equalsIgnoreCase(paymentMode);
 
             int layoutResId = isGstBill ? R.layout.professional_bill_layout : R.layout.estimate_bill_layout;
-            billView = inflater.inflate(layoutResId, null);
+            billView = LayoutInflater.from(pdfContext).inflate(layoutResId, null);
 
             TextView billTitle = billView.findViewById(R.id.bill_title_textview);
             TextView shopNameView = billView.findViewById(R.id.shop_name_textview);

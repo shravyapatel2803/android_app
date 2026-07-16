@@ -43,9 +43,16 @@
             android:icon="@android:drawable/ic_menu_manage"
             android:title="Shop Profile" />
         <item
+            android:id="@+id/nav_worker_ledger"
+            android:icon="@android:drawable/ic_menu_edit"
+            android:title="Karigar Ledger" />
+        <item
             android:id="@+id/nav_suppliers"
             android:icon="@android:drawable/ic_menu_share"
             android:title="Suppliers" />
+        <item
+            android:id="@+id/nav_settings"
+            android:icon="@android:drawable/ic_menu_preferences"
+            android:title="Settings" />
     </group>
-
 </menu>

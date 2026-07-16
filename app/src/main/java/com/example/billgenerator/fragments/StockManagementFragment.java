@@ -54,9 +54,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Date;
 import java.util.Locale;
 
+import android.os.Handler;
+import android.os.Looper;
 
 public class StockManagementFragment extends Fragment {
 
@@ -67,6 +70,7 @@ public class StockManagementFragment extends Fragment {
     // List displayed by the adapter (filtered)
     private ArrayList<item_recycler_model_stocks> filteredItemList = new ArrayList<>();
     private databaseSystem dbHelper;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private String queryFilter = "";
     private int statusFilter = 0; // 0=all, 1=available, 2=sold
     private int typeFilter = 0; // 0=all, 1=gold, 2=silver, 3=other
@@ -99,6 +103,7 @@ public class StockManagementFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        mainHandler.removeCallbacksAndMessages(null);
         binding = null;
     }
 
@@ -171,37 +176,44 @@ public class StockManagementFragment extends Fragment {
     }
 
     private void loadItemsFromDB() {
-        itemList.clear(); // Clear the master list before loading
-        Cursor cursor = dbHelper.fetchItems();
-        if (cursor != null) {
-            // Get column indices once
-            int idCol = cursor.getColumnIndexOrThrow("id");
-            int nameCol = cursor.getColumnIndexOrThrow("name");
-            int weightCol = cursor.getColumnIndexOrThrow("weight");
-            int typeCol = cursor.getColumnIndexOrThrow("type");
-            int barcodeCol = cursor.getColumnIndexOrThrow("barcode");
-            int soldCol = cursor.getColumnIndexOrThrow("is_sold");
+        databaseSystem.databaseExecutor.execute(() -> {
+            Cursor cursor = dbHelper.fetchItems();
+            ArrayList<item_recycler_model_stocks> loadedItems = new ArrayList<>();
+            if (cursor != null) {
+                int idCol = cursor.getColumnIndexOrThrow("id");
+                int nameCol = cursor.getColumnIndexOrThrow("name");
+                int weightCol = cursor.getColumnIndexOrThrow("weight");
+                int typeCol = cursor.getColumnIndexOrThrow("type");
+                int barcodeCol = cursor.getColumnIndexOrThrow("barcode");
+                int soldCol = cursor.getColumnIndexOrThrow("is_sold");
 
-            while (cursor.moveToNext()) {
-                int id = cursor.getInt(idCol);
-                String name = cursor.getString(nameCol);
-                double weight = cursor.getDouble(weightCol);
-                String type = cursor.getString(typeCol);
-                String barcode = cursor.getString(barcodeCol);
-                boolean isSold = cursor.getInt(soldCol) == 1;
-
-                itemList.add(new item_recycler_model_stocks(id, name, weight, type, barcode, isSold));
+                while (cursor.moveToNext()) {
+                    loadedItems.add(new item_recycler_model_stocks(
+                            cursor.getInt(idCol),
+                            cursor.getString(nameCol),
+                            cursor.getDouble(weightCol),
+                            cursor.getString(typeCol),
+                            cursor.getString(barcodeCol),
+                            cursor.getInt(soldCol) == 1
+                    ));
+                }
+                cursor.close();
             }
-            cursor.close();
-        }
-        // <-- Apply filter after loading master list -->
-        filter(queryFilter);
-        refreshStockSummary();
+
+            mainHandler.post(() -> {
+                if (binding != null) {
+                    itemList.clear();
+                    itemList.addAll(loadedItems);
+                    filter(queryFilter);
+                    refreshStockSummary();
+                }
+            });
+        });
     }
 
     // <-- Added: Filter logic -->
     private void filter(String text) {
-        filteredItemList.clear(); // Clear the list displayed by the adapter
+        ArrayList<item_recycler_model_stocks> newFilteredList = new ArrayList<>();
         queryFilter = text == null ? "" : text;
         String searchText = queryFilter.toLowerCase(Locale.getDefault());
         for (item_recycler_model_stocks item : itemList) {
@@ -225,11 +237,15 @@ public class StockManagementFragment extends Fragment {
                     || item.getName().toLowerCase(Locale.getDefault()).contains(searchText)
                 || itemType.contains(searchText);
             if (matchesStatus && matchesType && matchesWeight && matchesSearch) {
-                filteredItemList.add(item);
+                newFilteredList.add(item);
             }
         }
+
+        filteredItemList.clear();
+        filteredItemList.addAll(newFilteredList);
+        
         if (adapter != null) {
-            adapter.notifyDataSetChanged();
+            adapter.notifyDataSetChanged(); // For filter results, whole set usually changes
             binding.stockItemRecyclerView.scheduleLayoutAnimation();
         }
         UiAnimationHelper.setVisible(binding.stockEmptyState.getRoot(), filteredItemList.isEmpty());
@@ -326,10 +342,15 @@ public class StockManagementFragment extends Fragment {
                 RadioButton selectedType = dialog.findViewById(selectedTypeId);
                 String type = selectedType.getText().toString();
 
-                dbHelper.updateItem(item.getId(), name, weight, type, barcode.isEmpty() ? null : barcode);
-                Toast.makeText(getContext(), "Item updated!", Toast.LENGTH_SHORT).show();
-                dialog.dismiss();
-                loadItemsFromDB();
+                databaseSystem.databaseExecutor.execute(() -> {
+                    dbHelper.updateItem(item.getId(), name, weight, type, barcode.isEmpty() ? null : barcode);
+
+                    mainHandler.post(() -> {
+                        Toast.makeText(getContext(), "Item updated!", Toast.LENGTH_SHORT).show();
+                        dialog.dismiss();
+                        loadItemsFromDB();
+                    });
+                });
             } catch (NumberFormatException e) {
                 Toast.makeText(getContext(), "Invalid weight format", Toast.LENGTH_SHORT).show();
             }
@@ -384,11 +405,16 @@ public class StockManagementFragment extends Fragment {
                 RadioButton selectedType = dialog.findViewById(selectedTypeId);
                 String type = selectedType.getText().toString();
 
-                // Insert with isSold = false by default
-                dbHelper.insertItem(name, weight, type, barcode.isEmpty() ? null : barcode, false);
-                Toast.makeText(getContext(), "Item saved!", Toast.LENGTH_SHORT).show();
-                dialog.dismiss();
-                loadItemsFromDB(); // Refresh the master list and re-apply filter
+                databaseSystem.databaseExecutor.execute(() -> {
+                    // Insert with isSold = false by default
+                    dbHelper.insertItem(name, weight, type, barcode.isEmpty() ? null : barcode, false);
+
+                    mainHandler.post(() -> {
+                        Toast.makeText(getContext(), "Item saved!", Toast.LENGTH_SHORT).show();
+                        dialog.dismiss();
+                        loadItemsFromDB();
+                    });
+                });
             } catch (NumberFormatException e) {
                 Toast.makeText(getContext(), "Invalid weight format", Toast.LENGTH_SHORT).show();
             }

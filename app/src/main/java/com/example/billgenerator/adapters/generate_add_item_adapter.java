@@ -23,6 +23,12 @@ import com.example.billgenerator.models.SelectedItem; // <-- Changed from item_r
 import java.util.ArrayList;
 import java.util.Locale;
 
+import android.os.Handler;
+import android.os.Looper;
+import android.widget.ImageView;
+import androidx.recyclerview.widget.DiffUtil;
+import java.util.List;
+
 public class generate_add_item_adapter extends RecyclerView.Adapter<generate_add_item_adapter.ViewHolder> {
     // --- Context and Fragment Reference ---
     Context context;
@@ -37,6 +43,9 @@ public class generate_add_item_adapter extends RecyclerView.Adapter<generate_add
     databaseSystem dbHelper;
     Dialog parentDialog; // The dialog this adapter lives in
     private static final String TAG = "GenAddItemAdapter"; // For logging
+
+
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
 
     // --- Updated Constructor ---
@@ -56,12 +65,36 @@ public class generate_add_item_adapter extends RecyclerView.Adapter<generate_add
     }
 
     public void updateData(ArrayList<item_recycler_model_stocks> newData) {
-        allAvailableItemsList.clear();
-        allAvailableItemsList.addAll(newData);
-        filteredAvailableItemsList.clear();
-        filteredAvailableItemsList.addAll(newData);
-        notifyDataSetChanged();
-        Log.d(TAG, "Data updated. New size: " + allAvailableItemsList.size());
+        ArrayList<item_recycler_model_stocks> oldList = new ArrayList<>(filteredAvailableItemsList);
+        
+        databaseSystem.databaseExecutor.execute(() -> {
+            DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new DiffUtil.Callback() {
+                @Override
+                public int getOldListSize() { return oldList.size(); }
+                @Override
+                public int getNewListSize() { return newData.size(); }
+                @Override
+                public boolean areItemsTheSame(int oldPos, int newPos) {
+                    return oldList.get(oldPos).getId() == newData.get(newPos).getId();
+                }
+                @Override
+                public boolean areContentsTheSame(int oldPos, int newPos) {
+                    item_recycler_model_stocks oldItem = oldList.get(oldPos);
+                    item_recycler_model_stocks newItem = newData.get(newPos);
+                    return oldItem.getName().equals(newItem.getName()) && 
+                           oldItem.getWeight() == newItem.getWeight() &&
+                           oldItem.getType().equals(newItem.getType());
+                }
+            });
+
+            mainHandler.post(() -> {
+                allAvailableItemsList.clear();
+                allAvailableItemsList.addAll(newData);
+                filteredAvailableItemsList.clear();
+                filteredAvailableItemsList.addAll(newData);
+                diffResult.dispatchUpdatesTo(this);
+            });
+        });
     }
 
     @NonNull
@@ -75,16 +108,20 @@ public class generate_add_item_adapter extends RecyclerView.Adapter<generate_add
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        // Bind data from the filtered list (items available to be added)
         item_recycler_model_stocks model = filteredAvailableItemsList.get(position);
 
         holder.itemName.setText(model.getName());
         holder.itemWeight.setText(String.format(Locale.getDefault(), "%.3f g", model.getWeight()));
-        // TODO: Add logic for itemIcon and soldIconOverlay if they exist in item_layout_recyclerview
-        // e.g., holder.itemIcon.setImageResource(model.getType().equalsIgnoreCase("Gold") ? R.drawable.ic_gold_ingot : R.drawable.ic_silver_bar);
-        // holder.soldIconOverlay.setVisibility(View.GONE); // Should always be hidden here
+        
+        if (holder.itemIcon != null) {
+            holder.itemIcon.setImageResource("Gold".equalsIgnoreCase(model.getType()) ? 
+                    R.drawable.ic_gold_ingot : R.drawable.ic_silver_bar);
+        }
 
-        // --- Click Listener to Add Item ---
+        if (holder.deleteButton != null) {
+            holder.deleteButton.setVisibility(View.GONE);
+        }
+
         holder.itemView.setOnClickListener(v -> {
             int currentPosition = holder.getBindingAdapterPosition();
             if (currentPosition == RecyclerView.NO_POSITION) {
@@ -193,41 +230,54 @@ public class generate_add_item_adapter extends RecyclerView.Adapter<generate_add
 
     // --- Filter Method ---
     public void filter(String text) {
-        Log.d(TAG, "Filtering list with text: '" + text + "'");
-        filteredAvailableItemsList.clear(); // Clear the displayed list
-        String searchText = (text == null) ? "" : text.toLowerCase(Locale.getDefault());
+        String searchText = (text == null) ? "" : text.toLowerCase(Locale.getDefault()).trim();
+        ArrayList<item_recycler_model_stocks> oldList = new ArrayList<>(filteredAvailableItemsList);
+        
+        databaseSystem.databaseExecutor.execute(() -> {
+            ArrayList<item_recycler_model_stocks> newList = new ArrayList<>();
 
-        if (searchText.isEmpty()) {
-            // If search is empty, show all items from the source list
-            filteredAvailableItemsList.addAll(allAvailableItemsList);
-            Log.d(TAG, "Filter empty, showing all " + allAvailableItemsList.size() + " available items.");
-        } else {
-            // Otherwise, iterate through the source list and add matches
-            for (item_recycler_model_stocks item : allAvailableItemsList) {
-                if (item.getName().toLowerCase(Locale.getDefault()).contains(searchText) ||
-                        item.getType().toLowerCase(Locale.getDefault()).contains(searchText)) {
-                    filteredAvailableItemsList.add(item);
+            if (searchText.isEmpty()) {
+                newList.addAll(allAvailableItemsList);
+            } else {
+                for (item_recycler_model_stocks item : allAvailableItemsList) {
+                    if (item.getName().toLowerCase(Locale.getDefault()).contains(searchText) ||
+                            item.getType().toLowerCase(Locale.getDefault()).contains(searchText)) {
+                        newList.add(item);
+                    }
                 }
             }
-            Log.d(TAG, "Filter applied, showing " + filteredAvailableItemsList.size() + " matching items.");
-        }
-        notifyDataSetChanged();
-        // Notify the adapter that the displayed list has changed
+
+            DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new DiffUtil.Callback() {
+                @Override public int getOldListSize() { return oldList.size(); }
+                @Override public int getNewListSize() { return newList.size(); }
+                @Override public boolean areItemsTheSame(int oldItemPosition, int newItemPosition) {
+                    return oldList.get(oldItemPosition).getId() == newList.get(newItemPosition).getId();
+                }
+                @Override public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
+                    return oldList.get(oldItemPosition).equals(newList.get(newItemPosition));
+                }
+            });
+
+            mainHandler.post(() -> {
+                filteredAvailableItemsList.clear();
+                filteredAvailableItemsList.addAll(newList);
+                diffResult.dispatchUpdatesTo(this);
+            });
+        });
     }
 
     // --- ViewHolder ---
     public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView itemName, itemWeight;
-        // Add ImageView references if they exist in item_layout_recyclerview.xml
-        // ImageView itemIcon, soldIconOverlay;
+        ImageView itemIcon;
+        View deleteButton;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            // Ensure these IDs exist in R.layout.item_layout_recyclerview
             itemName = itemView.findViewById(R.id.item_name_textview);
             itemWeight = itemView.findViewById(R.id.item_weight_textview);
-            // itemIcon = itemView.findViewById(R.id.item_icon);
-            // soldIconOverlay = itemView.findViewById(R.id.sold_icon_overlay);
+            itemIcon = itemView.findViewById(R.id.item_icon);
+            deleteButton = itemView.findViewById(R.id.delete_button);
         }
     }
 }

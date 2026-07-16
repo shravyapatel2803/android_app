@@ -52,7 +52,7 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
-public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
+public class MainActivity extends BaseActivity implements NavigationView.OnNavigationItemSelectedListener {
 
     public static final String EXTRA_OPEN_DESTINATION = "extra_open_destination";
     public static final String EXTRA_OPEN_CUSTOMER_ID = "extra_open_customer_id";
@@ -248,6 +248,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         if (destination == 8) return R.id.nav_collection_mode;
         if (destination == 9) return R.id.nav_shop_profile;
         if (destination == 10) return R.id.nav_suppliers;
+        if (destination == 11) return R.id.nav_worker_ledger;
+        if (destination == 12) return R.id.nav_settings;
         return R.id.nav_dashboard;
     }
 
@@ -377,7 +379,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         File targetDb = getDatabasePath("my_database.db");
         File parent = targetDb.getParentFile();
         if (parent != null && !parent.exists()) {
-            parent.mkdirs();
+            if (!parent.mkdirs()) {
+                Toast.makeText(this, "Restore failed: Could not create directory.", Toast.LENGTH_SHORT).show();
+                return;
+            }
         }
 
         try (InputStream in = getContentResolver().openInputStream(uri);
@@ -392,25 +397,37 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             while ((length = in.read(buffer)) > 0) {
                 out.write(buffer, 0, length);
             }
+            out.flush();
 
             Toast.makeText(this, "Restore successful. Please restart app.", Toast.LENGTH_LONG).show();
         } catch (IOException e) {
-            e.printStackTrace();
+            Log.e(TAG, "Error importing database", e);
             Toast.makeText(this, "Restore failed!", Toast.LENGTH_SHORT).show();
         }
     }
 
     private void exportDatabase(Uri uri) {
-        try (InputStream in = new FileInputStream(getDatabasePath("my_database.db"));
+        File sourceDb = getDatabasePath("my_database.db");
+        if (!sourceDb.exists()) {
+            Toast.makeText(this, "No database found to export.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        try (InputStream in = new FileInputStream(sourceDb);
              OutputStream out = getContentResolver().openOutputStream(uri)) {
+            if (out == null) {
+                Toast.makeText(this, "Export failed: Could not write to destination.", Toast.LENGTH_SHORT).show();
+                return;
+            }
             byte[] buffer = new byte[1024];
             int length;
             while ((length = in.read(buffer)) > 0) {
                 out.write(buffer, 0, length);
             }
+            out.flush();
             Toast.makeText(this, "Backup Successful!", Toast.LENGTH_SHORT).show();
         } catch (IOException e) {
-            e.printStackTrace();
+            Log.e(TAG, "Error exporting database", e);
             Toast.makeText(this, "Backup Failed!", Toast.LENGTH_SHORT).show();
         }
     }
@@ -489,6 +506,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             destination = 9;
         } else if (itemId == R.id.nav_suppliers) {
             destination = 10;
+        } else if (itemId == R.id.nav_worker_ledger) {
+            destination = 11;
+        } else if (itemId == R.id.nav_settings) {
+            destination = 12;
         }
         binding.viewPager.setCurrentItem(destination, false);
         if (binding.drawerLayout != null) {

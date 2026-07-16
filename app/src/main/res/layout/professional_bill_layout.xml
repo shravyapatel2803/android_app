@@ -96,7 +96,7 @@
             android:layout_weight="1"
             android:text="GST NO: NA"
             android:textColor="#111111"
-            android:textSize="10sp"
+            android:textSize="7sp"
             android:textStyle="bold" />
 
         <TextView
@@ -105,7 +105,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="TAX INVOICE"
+            android:text="@string/tax_invoice"
             android:textColor="#111111"
             android:textSize="15sp"
             android:textStyle="bold" />

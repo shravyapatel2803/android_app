@@ -18,10 +18,14 @@ import android.text.TextUtils;
 
 import androidx.annotation.RequiresApi;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 public class databaseSystem extends SQLiteOpenHelper {
 
+    public static final ExecutorService databaseExecutor = Executors.newFixedThreadPool(4);
     private static final String DATABASE_NAME = "my_database.db";
-    private static final int DATABASE_VERSION = 13;
+    private static final int DATABASE_VERSION = 15;
 
     private static final String TABLE_ITEMS = "items";
     private static final String TABLE_CUSTOMERS = "customer";
@@ -33,6 +37,9 @@ public class databaseSystem extends SQLiteOpenHelper {
     private static final String TABLE_SUPPLIERS = "suppliers";
     private static final String TABLE_PURCHASE_BILLS = "purchase_bills";
     private static final String TABLE_EXPENSES = "expenses";
+    private static final String TABLE_BILL_DRAFTS = "bill_drafts";
+    private static final String TABLE_WORKERS = "workers";
+    private static final String TABLE_WORKER_LOGS = "worker_logs";
 
     private static final String COLUMN_ID = "id";
     private static final String COLUMN_NAME = "name";
@@ -61,6 +68,8 @@ public class databaseSystem extends SQLiteOpenHelper {
     private static final String COLUMN_RETURN_ITEM_DEDUCT_AMOUNT = "return_item_deduct_amount";
     private static final String COLUMN_DEBT_DUE_DATE = "debt_due_date";
     private static final String COLUMN_DEBT_AMOUNT = "debt_amount";
+    private static final String COLUMN_PDC_DATE = "pdc_date";
+    private static final String COLUMN_CUSTOMER_PHOTO = "customer_photo";
 
     private static final String COLUMN_BILL_ID = "bill_id";
     private static final String COLUMN_ITEM_ID = "item_id";
@@ -98,6 +107,24 @@ public class databaseSystem extends SQLiteOpenHelper {
     private static final String COLUMN_EXPENSE_DATE = "date";
     private static final String COLUMN_EXPENSE_CREATED_AT = "created_at";
 
+    // Bill Draft Columns
+    private static final String COLUMN_DRAFT_CUSTOMER_NAME = "customer_name";
+    private static final String COLUMN_DRAFT_JSON_DATA = "draft_data";
+    private static final String COLUMN_DRAFT_CREATED_AT = "created_at";
+
+    // Worker Columns
+    private static final String COLUMN_WORKER_PHONE = "phone";
+    private static final String COLUMN_WORKER_BALANCE_GOLD = "gold_balance";
+    private static final String COLUMN_WORKER_BALANCE_SILVER = "silver_balance";
+
+    // Worker Log Columns
+    private static final String COLUMN_LOG_WORKER_ID = "worker_id";
+    private static final String COLUMN_LOG_TYPE = "type"; // "GIVEN", "RECEIVED", "LOSS"
+    private static final String COLUMN_LOG_METAL_TYPE = "metal_type"; // "GOLD", "SILVER"
+    private static final String COLUMN_LOG_WEIGHT = "weight";
+    private static final String COLUMN_LOG_NOTE = "note";
+    private static final String COLUMN_LOG_CREATED_AT = "created_at";
+
     public databaseSystem(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
@@ -119,7 +146,8 @@ public class databaseSystem extends SQLiteOpenHelper {
                 + COLUMN_NAME + " TEXT,"
                 + COLUMN_PHONE + " TEXT UNIQUE,"
                 + COLUMN_VILLAGE + " TEXT,"
-                + COLUMN_DEBT + " REAL DEFAULT 0.0" + ")";
+                + COLUMN_DEBT + " REAL DEFAULT 0.0,"
+                + COLUMN_CUSTOMER_PHOTO + " TEXT" + ")";
         db.execSQL(CREATE_CUSTOMERS_TABLE);
 
         String CREATE_BILLS_TABLE = "CREATE TABLE " + TABLE_BILLS + "("
@@ -139,6 +167,7 @@ public class databaseSystem extends SQLiteOpenHelper {
                 + COLUMN_RETURN_ITEM_DEDUCT_AMOUNT + " REAL,"
             + COLUMN_DEBT_DUE_DATE + " TEXT,"
             + COLUMN_DEBT_AMOUNT + " REAL DEFAULT 0.0,"
+            + COLUMN_PDC_DATE + " TEXT,"
                 + "FOREIGN KEY(" + COLUMN_CUSTOMER_ID + ") REFERENCES " + TABLE_CUSTOMERS + "(" + COLUMN_ID + "))";
         db.execSQL(CREATE_BILLS_TABLE);
 
@@ -207,6 +236,32 @@ public class databaseSystem extends SQLiteOpenHelper {
                 + COLUMN_EXPENSE_DATE + " TEXT,"
                 + COLUMN_EXPENSE_CREATED_AT + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")";
         db.execSQL(CREATE_EXPENSES_TABLE);
+
+        String CREATE_BILL_DRAFTS_TABLE = "CREATE TABLE " + TABLE_BILL_DRAFTS + "("
+                + COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + COLUMN_DRAFT_CUSTOMER_NAME + " TEXT,"
+                + COLUMN_DRAFT_JSON_DATA + " TEXT,"
+                + COLUMN_DRAFT_CREATED_AT + " DATETIME DEFAULT CURRENT_TIMESTAMP)";
+        db.execSQL(CREATE_BILL_DRAFTS_TABLE);
+
+        String CREATE_WORKERS_TABLE = "CREATE TABLE " + TABLE_WORKERS + "("
+                + COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + COLUMN_NAME + " TEXT,"
+                + COLUMN_WORKER_PHONE + " TEXT,"
+                + COLUMN_WORKER_BALANCE_GOLD + " REAL DEFAULT 0.0,"
+                + COLUMN_WORKER_BALANCE_SILVER + " REAL DEFAULT 0.0)";
+        db.execSQL(CREATE_WORKERS_TABLE);
+
+        String CREATE_WORKER_LOGS_TABLE = "CREATE TABLE " + TABLE_WORKER_LOGS + "("
+                + COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + COLUMN_LOG_WORKER_ID + " INTEGER,"
+                + COLUMN_LOG_TYPE + " TEXT,"
+                + COLUMN_LOG_METAL_TYPE + " TEXT,"
+                + COLUMN_LOG_WEIGHT + " REAL,"
+                + COLUMN_LOG_NOTE + " TEXT,"
+                + COLUMN_LOG_CREATED_AT + " DATETIME DEFAULT CURRENT_TIMESTAMP,"
+                + "FOREIGN KEY(" + COLUMN_LOG_WORKER_ID + ") REFERENCES " + TABLE_WORKERS + "(" + COLUMN_ID + "))";
+        db.execSQL(CREATE_WORKER_LOGS_TABLE);
 
         Log.i("Database", "Database tables created successfully.");
     }
@@ -293,6 +348,10 @@ public class databaseSystem extends SQLiteOpenHelper {
                     + COLUMN_EXPENSE_DATE + " TEXT,"
                     + COLUMN_EXPENSE_CREATED_AT + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")";
             db.execSQL(CREATE_EXPENSES_TABLE);
+        }
+        if (oldVersion < 15) {
+            db.execSQL("ALTER TABLE " + TABLE_BILLS + " ADD COLUMN " + COLUMN_PDC_DATE + " TEXT");
+            db.execSQL("ALTER TABLE " + TABLE_CUSTOMERS + " ADD COLUMN " + COLUMN_CUSTOMER_PHOTO + " TEXT");
         }
     }
 
@@ -429,12 +488,13 @@ public class databaseSystem extends SQLiteOpenHelper {
         return result;
     }
 
-    public int updateCustomer(long id, String name, String village, double debt) {
+    public int updateCustomer(long id, String name, String village, double debt, String photoPath) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_NAME, name);
         values.put(COLUMN_VILLAGE, village);
         values.put(COLUMN_DEBT, debt);
+        values.put(COLUMN_CUSTOMER_PHOTO, photoPath);
         Log.d("Database", "Updating customer ID " + id + " - Name: " + name + ", Village: " + village + ", Debt: " + debt);
         int rows = db.update(TABLE_CUSTOMERS, values, COLUMN_ID + " = ?", new String[]{String.valueOf(id)});
         if (rows <= 0) {
@@ -443,22 +503,22 @@ public class databaseSystem extends SQLiteOpenHelper {
         return rows;
     }
 
+    public int updateCustomer(long id, String name, String village, double debt) {
+        return updateCustomer(id, name, village, debt, null);
+    }
+
     public int updateCustomerDebt(long customerId, double debtChange) {
         SQLiteDatabase db = this.getWritableDatabase();
-        Log.d("UpdateDebt", "Attempting to add debt " + debtChange + " to customer ID: " + customerId);
-        String updateQuery = "UPDATE " + TABLE_CUSTOMERS +
-                " SET " + COLUMN_DEBT + " = " + COLUMN_DEBT + " + ?" +
-                " WHERE " + COLUMN_ID + " = ?";
         int rowsAffected = 0;
         db.beginTransaction();
         try {
-            db.execSQL(updateQuery, new Object[]{debtChange, customerId});
+            db.execSQL("UPDATE " + TABLE_CUSTOMERS +
+                    " SET " + COLUMN_DEBT + " = " + COLUMN_DEBT + " + ?" +
+                    " WHERE " + COLUMN_ID + " = ?", new Object[]{debtChange, customerId});
             db.setTransactionSuccessful();
             rowsAffected = 1;
-            Log.i("UpdateDebt", "Successfully updated debt for customer " + customerId + " by " + debtChange);
         } catch (Exception e) {
-            Log.e("UpdateDebt", "Error updating debt for customer " + customerId, e);
-            rowsAffected = 0;
+            Log.e("Database", "Error updating debt", e);
         } finally {
             db.endTransaction();
         }
@@ -704,58 +764,64 @@ public class databaseSystem extends SQLiteOpenHelper {
         return insertBill(null, customerId, calcGoldRate, calcSilverRate, finalTotalAmount, gstPercent, paymentMode, paymentDetails, items, returnItems, debtDueDate, debtAmount, billedAmount, paidAmount);
     }
 
-    public long insertBill(Integer explicitBillId, long customerId, double calcGoldRate, double calcSilverRate, double finalTotalAmount, double gstPercent, String paymentMode, String paymentDetails, List<SelectedItem> items, List<ReturnItem> returnItems, String debtDueDate, double debtAmount, double billedAmount, double paidAmount) {
+    public long insertBill(Integer explicitBillId, long customerId, double calcGoldRate, double calcSilverRate, double finalTotalAmount, double gstPercent, String paymentMode, String paymentDetails, List<SelectedItem> items, List<ReturnItem> returnItems, String debtDueDate, double debtAmount, double billedAmount, double paidAmount, String pdcDate) {
         SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        if (explicitBillId != null) {
-            values.put(COLUMN_ID, explicitBillId);
-        }
-        values.put(COLUMN_CUSTOMER_ID, customerId);
-        values.put(COLUMN_CALCULATED_GOLD_RATE, calcGoldRate);
-        values.put(COLUMN_CALCULATED_SILVER_RATE, calcSilverRate);
-        values.put(COLUMN_TOTAL_AMOUNT, finalTotalAmount);
-        values.put(COLUMN_BILLED_AMOUNT, billedAmount);
-        values.put(COLUMN_PAID_AMOUNT, paidAmount);
-        values.put(COLUMN_GST_PERCENT, gstPercent);
-        values.put(COLUMN_PAYMENT_MODE, paymentMode);
-        values.put(COLUMN_PAYMENT_DETAILS, paymentDetails);
-
-        // Keep single return item columns for backward compatibility if needed, or set to null
-        if (returnItems != null && !returnItems.isEmpty()) {
-            values.put(COLUMN_RETURN_ITEM_TYPE, returnItems.get(0).getType());
-            values.put(COLUMN_RETURN_ITEM_WEIGHT, returnItems.get(0).getWeight());
-            values.put(COLUMN_RETURN_ITEM_DEDUCT_AMOUNT, returnItems.get(0).getDeductAmount());
-        }
-
-        values.put(COLUMN_DEBT_DUE_DATE, debtDueDate);
-        values.put(COLUMN_DEBT_AMOUNT, debtAmount);
-
-        Log.d("Database", "Inserting bill for customer ID: " + customerId + ", Amount: " + finalTotalAmount + ", GST: " + gstPercent + "%, Payment Mode: " + paymentMode);
-        long billId = db.insert(TABLE_BILLS, null, values);
-
-        if (billId != -1) {
-            Log.i("Database", "Inserted bill with ID: " + billId);
-            if (items != null && !items.isEmpty()) {
-                Log.d("Database", "Inserting " + items.size() + " items for bill ID: " + billId);
-                for (SelectedItem item : items) {
-                    insertBillItem(billId, item.getId());
-                }
+        long billId = -1;
+        db.beginTransaction();
+        try {
+            ContentValues values = new ContentValues();
+            if (explicitBillId != null) {
+                values.put(COLUMN_ID, explicitBillId);
             }
+            values.put(COLUMN_CUSTOMER_ID, customerId);
+            values.put(COLUMN_CALCULATED_GOLD_RATE, calcGoldRate);
+            values.put(COLUMN_CALCULATED_SILVER_RATE, calcSilverRate);
+            values.put(COLUMN_TOTAL_AMOUNT, finalTotalAmount);
+            values.put(COLUMN_BILLED_AMOUNT, billedAmount);
+            values.put(COLUMN_PAID_AMOUNT, paidAmount);
+            values.put(COLUMN_GST_PERCENT, gstPercent);
+            values.put(COLUMN_PAYMENT_MODE, paymentMode);
+            values.put(COLUMN_PAYMENT_DETAILS, paymentDetails);
 
             if (returnItems != null && !returnItems.isEmpty()) {
-                Log.d("Database", "Inserting " + returnItems.size() + " return items for bill ID: " + billId);
-                for (ReturnItem returnItem : returnItems) {
-                    insertBillReturnItem(billId, returnItem);
-                }
+                values.put(COLUMN_RETURN_ITEM_TYPE, returnItems.get(0).getType());
+                values.put(COLUMN_RETURN_ITEM_WEIGHT, returnItems.get(0).getWeight());
+                values.put(COLUMN_RETURN_ITEM_DEDUCT_AMOUNT, returnItems.get(0).getDeductAmount());
             }
-        } else {
-            Log.e("Database", "Failed to insert bill for customer ID: " + customerId);
+
+            values.put(COLUMN_DEBT_DUE_DATE, debtDueDate);
+            values.put(COLUMN_DEBT_AMOUNT, debtAmount);
+            values.put(COLUMN_PDC_DATE, pdcDate);
+
+            billId = db.insert(TABLE_BILLS, null, values);
+
+            if (billId != -1) {
+                if (items != null && !items.isEmpty()) {
+                    for (SelectedItem item : items) {
+                        insertBillItemInternal(db, billId, item.getId());
+                    }
+                }
+
+                if (returnItems != null && !returnItems.isEmpty()) {
+                    for (ReturnItem returnItem : returnItems) {
+                        insertBillReturnItemInternal(db, billId, returnItem);
+                    }
+                }
+                db.setTransactionSuccessful();
+            }
+        } catch (Exception e) {
+            Log.e("Database", "Error inserting bill in transaction", e);
+        } finally {
+            db.endTransaction();
         }
         return billId;
     }
 
-    public void insertBillReturnItem(long billId, ReturnItem item) {
-        SQLiteDatabase db = this.getWritableDatabase();
+    public long insertBill(Integer explicitBillId, long customerId, double calcGoldRate, double calcSilverRate, double finalTotalAmount, double gstPercent, String paymentMode, String paymentDetails, List<SelectedItem> items, List<ReturnItem> returnItems, String debtDueDate, double debtAmount, double billedAmount, double paidAmount) {
+        return insertBill(explicitBillId, customerId, calcGoldRate, calcSilverRate, finalTotalAmount, gstPercent, paymentMode, paymentDetails, items, returnItems, debtDueDate, debtAmount, billedAmount, paidAmount, null);
+    }
+
+    private void insertBillReturnItemInternal(SQLiteDatabase db, long billId, ReturnItem item) {
         ContentValues values = new ContentValues();
         values.put(COLUMN_BILL_ID, billId);
         values.put(COLUMN_RETURN_TYPE, item.getType());
@@ -764,17 +830,19 @@ public class databaseSystem extends SQLiteOpenHelper {
         db.insert(TABLE_BILL_RETURN_ITEMS, null, values);
     }
 
-    public void insertBillItem(long billId, int itemId) {
-        SQLiteDatabase db = this.getWritableDatabase();
+    private void insertBillItemInternal(SQLiteDatabase db, long billId, int itemId) {
         ContentValues values = new ContentValues();
         values.put(COLUMN_BILL_ID, billId);
         values.put(COLUMN_ITEM_ID, itemId);
-        long result = db.insert(TABLE_BILL_ITEMS, null, values);
-        if (result == -1) {
-            Log.e("Database", "Failed to insert bill item link: BillID=" + billId + ", ItemID=" + itemId);
-        } else {
-            Log.d("Database", "Linked Item ID " + itemId + " to Bill ID " + billId);
-        }
+        db.insert(TABLE_BILL_ITEMS, null, values);
+    }
+
+    public void insertBillReturnItem(long billId, ReturnItem item) {
+        insertBillReturnItemInternal(getWritableDatabase(), billId, item);
+    }
+
+    public void insertBillItem(long billId, int itemId) {
+        insertBillItemInternal(getWritableDatabase(), billId, itemId);
     }
 
     public Cursor fetchBillHistory() {
@@ -1144,5 +1212,73 @@ public class databaseSystem extends SQLiteOpenHelper {
                 "FROM " + TABLE_DEBT_UPDATES + " WHERE " + COLUMN_CUSTOMER_ID + " = ? " +
                 "ORDER BY date DESC, id DESC";
         return db.rawQuery(query, new String[]{String.valueOf(customerId), String.valueOf(customerId)});
+    }
+
+    // Bill Drafts
+    public long insertDraft(String customerName, String jsonData) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_DRAFT_CUSTOMER_NAME, customerName);
+        values.put(COLUMN_DRAFT_JSON_DATA, jsonData);
+        return db.insert(TABLE_BILL_DRAFTS, null, values);
+    }
+
+    public Cursor fetchDrafts() {
+        SQLiteDatabase db = this.getReadableDatabase();
+        return db.query(TABLE_BILL_DRAFTS, null, null, null, null, null, COLUMN_DRAFT_CREATED_AT + " DESC");
+    }
+
+    public void deleteDraft(int draftId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.delete(TABLE_BILL_DRAFTS, COLUMN_ID + " = ?", new String[]{String.valueOf(draftId)});
+    }
+
+    // Worker Management
+    public long insertWorker(String name, String phone) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_NAME, name);
+        values.put(COLUMN_WORKER_PHONE, phone);
+        return db.insert(TABLE_WORKERS, null, values);
+    }
+
+    public Cursor fetchWorkers() {
+        SQLiteDatabase db = this.getReadableDatabase();
+        return db.query(TABLE_WORKERS, null, null, null, null, null, COLUMN_NAME + " ASC");
+    }
+
+    public void logWorkerTransaction(int workerId, String type, String metalType, double weight, String note) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            ContentValues values = new ContentValues();
+            values.put(COLUMN_LOG_WORKER_ID, workerId);
+            values.put(COLUMN_LOG_TYPE, type);
+            values.put(COLUMN_LOG_METAL_TYPE, metalType);
+            values.put(COLUMN_LOG_WEIGHT, weight);
+            values.put(COLUMN_LOG_NOTE, note);
+            db.insert(TABLE_WORKER_LOGS, null, values);
+
+            // Update balance
+            double change = 0;
+            if ("GIVEN".equalsIgnoreCase(type)) {
+                change = weight;
+            } else if ("RECEIVED".equalsIgnoreCase(type) || "LOSS".equalsIgnoreCase(type)) {
+                change = -weight;
+            }
+
+            String columnToUpdate = "GOLD".equalsIgnoreCase(metalType) ? COLUMN_WORKER_BALANCE_GOLD : COLUMN_WORKER_BALANCE_SILVER;
+            db.execSQL("UPDATE " + TABLE_WORKERS + " SET " + columnToUpdate + " = " + columnToUpdate + " + ? WHERE " + COLUMN_ID + " = ?",
+                    new Object[]{change, workerId});
+
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    public Cursor fetchWorkerLogs(int workerId) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        return db.query(TABLE_WORKER_LOGS, null, COLUMN_LOG_WORKER_ID + " = ?", new String[]{String.valueOf(workerId)}, null, null, COLUMN_LOG_CREATED_AT + " DESC");
     }
 }

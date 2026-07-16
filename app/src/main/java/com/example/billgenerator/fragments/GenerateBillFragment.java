@@ -2,11 +2,14 @@ package com.example.billgenerator.fragments;
 
 import android.app.Dialog;
 import android.app.DatePickerDialog;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
@@ -22,6 +25,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -48,6 +52,8 @@ import com.google.android.material.textfield.TextInputLayout;
 import com.google.android.material.textfield.TextInputEditText;
 
 import com.example.billgenerator.adapters.ReturnItemAdapter;
+import com.example.billgenerator.adapters.DraftAdapter;
+import com.example.billgenerator.models.DraftItem;
 import com.example.billgenerator.models.Item;
 import com.example.billgenerator.models.ReturnItem;
 import com.example.billgenerator.models.item_recycler_model_stocks;
@@ -66,10 +72,14 @@ import com.google.mlkit.vision.codescanner.GmsBarcodeScanning;
 import com.google.mlkit.vision.barcode.common.Barcode;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
@@ -79,6 +89,9 @@ import java.util.regex.Pattern;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class GenerateBillFragment extends Fragment {
 
@@ -96,6 +109,9 @@ public class GenerateBillFragment extends Fragment {
     private View generateBillItemsEmpty;
     private RecyclerView returnItemsRecyclerView;
     private Button addReturnItemButton;
+    private ImageView kycImageView;
+    private View kycContainer;
+    private String currentKycPhotoPath = null;
 
     private databaseSystem dbHelper;
     private ArrayList<SelectedItem> selectedItemsList = new ArrayList<>();
@@ -112,7 +128,6 @@ public class GenerateBillFragment extends Fragment {
     private final ArrayList<CustomerSuggestion> nameSuggestions = new ArrayList<>();
     private final ArrayList<CustomerSuggestion> phoneSuggestions = new ArrayList<>();
     
-    private final ExecutorService backgroundExecutor = Executors.newSingleThreadExecutor();
     private static ArrayList<item_recycler_model_stocks> cachedStockItems = null;
     private static final Object CACHE_LOCK = new Object();
     private Dialog reusableAddItemDialog;
@@ -152,6 +167,16 @@ public class GenerateBillFragment extends Fragment {
                     MenuItem cancelEdit = menu.add(0, 100, 0, "Cancel Edit");
                     cancelEdit.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
                 }
+                MenuItem parkBill = menu.add(0, 101, 0, "Park Bill");
+                parkBill.setIcon(R.drawable.ic_inventory); // Reusing an icon
+                parkBill.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+                
+                MenuItem resumeDraft = menu.add(0, 102, 0, "Saved Drafts");
+                resumeDraft.setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+
+                MenuItem clearForm = menu.add(0, 103, 0, "Clear Form");
+                clearForm.setIcon(android.R.drawable.ic_menu_close_clear_cancel);
+                clearForm.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
             }
 
             @Override
@@ -160,6 +185,15 @@ public class GenerateBillFragment extends Fragment {
                     clearForm();
                     requireActivity().invalidateOptionsMenu();
                     Toast.makeText(getContext(), "Editing cancelled", Toast.LENGTH_SHORT).show();
+                    return true;
+                } else if (menuItem.getItemId() == 101) {
+                    parkCurrentBill();
+                    return true;
+                } else if (menuItem.getItemId() == 102) {
+                    showDraftsDialog();
+                    return true;
+                } else if (menuItem.getItemId() == 103) {
+                    confirmClearForm();
                     return true;
                 }
                 return false;
@@ -191,6 +225,14 @@ public class GenerateBillFragment extends Fragment {
         generateBillItemsEmpty = view.findViewById(R.id.generate_bill_items_empty);
         returnItemsRecyclerView = view.findViewById(R.id.return_items_recycler_view);
         addReturnItemButton = view.findViewById(R.id.add_return_item_button);
+        kycImageView = view.findViewById(R.id.img_customer_kyc);
+        kycContainer = view.findViewById(R.id.kyc_photo_container);
+
+        loadSettingsAndApplyVisibility();
+
+        if (kycImageView != null) {
+            kycImageView.setOnClickListener(v -> takeKycPhoto());
+        }
 
 
         if (nameEditText == null || phoneEditText == null || villageEditText == null ||
@@ -234,12 +276,173 @@ public class GenerateBillFragment extends Fragment {
         Log.d(TAG, "View setup complete");
     }
 
+    private void parkCurrentBill() {
+        String name = nameEditText.getText().toString().trim();
+        if (selectedItemsList.isEmpty() && name.isEmpty()) {
+            Toast.makeText(getContext(), "Nothing to park", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            JSONObject draft = new JSONObject();
+            draft.put("name", name);
+            draft.put("phone", phoneEditText.getText().toString().trim());
+            draft.put("village", villageEditText.getText().toString().trim());
+            draft.put("total", manualTotalEditText.getText().toString().trim());
+            
+            JSONArray itemsArr = new JSONArray();
+            for (SelectedItem item : selectedItemsList) {
+                JSONObject itemObj = new JSONObject();
+                itemObj.put("id", item.getId());
+                itemObj.put("name", item.getName());
+                itemObj.put("weight", item.getWeight());
+                itemObj.put("type", item.getType());
+                itemsArr.put(itemObj);
+            }
+            draft.put("items", itemsArr);
+
+            String customerDisplayName = name.isEmpty() ? "Unnamed Customer" : name;
+            databaseSystem.databaseExecutor.execute(() -> {
+                dbHelper.insertDraft(customerDisplayName, draft.toString());
+                mainHandler.post(() -> {
+                    Toast.makeText(getContext(), "Bill Parked Successfully", Toast.LENGTH_SHORT).show();
+                    
+                    // IMPORTANT: When parking, items were already marked SOLD in DB 
+                    // (done in generate_add_item_adapter). We KEEP them SOLD.
+                    // This is consistent because we want to RESERVE them for this draft.
+                    
+                    clearForm();
+                });
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Error parking bill", e);
+        }
+    }
+
+    private void showDraftsDialog() {
+        databaseSystem.databaseExecutor.execute(() -> {
+            Cursor cursor = dbHelper.fetchDrafts();
+            ArrayList<DraftItem> drafts = new ArrayList<>();
+            if (cursor != null) {
+                while (cursor.moveToNext()) {
+                    drafts.add(new DraftItem(
+                        cursor.getInt(cursor.getColumnIndexOrThrow("id")),
+                        cursor.getString(cursor.getColumnIndexOrThrow("customer_name")),
+                        cursor.getString(cursor.getColumnIndexOrThrow("draft_data")),
+                        cursor.getString(cursor.getColumnIndexOrThrow("created_at"))
+                    ));
+                }
+                cursor.close();
+            }
+
+            mainHandler.post(() -> {
+                if (drafts.isEmpty()) {
+                    Toast.makeText(getContext(), "No saved drafts found", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                Dialog dialog = new Dialog(requireContext());
+                dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+                dialog.setContentView(R.layout.dialog_saved_drafts);
+                UiAnimationHelper.applyDialogAnimations(dialog);
+                
+                Window window = dialog.getWindow();
+                if (window != null) {
+                    window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                }
+
+                RecyclerView recyclerView = dialog.findViewById(R.id.drafts_recycler_view);
+                Button closeButton = dialog.findViewById(R.id.btn_close_drafts);
+
+                DraftAdapter adapter = new DraftAdapter(drafts, new DraftAdapter.OnDraftInteractionListener() {
+                    @Override
+                    public void onResume(DraftItem draft) {
+                        resumeDraft(draft);
+                        dialog.dismiss();
+                    }
+
+                    @Override
+                    public void onDelete(DraftItem draft) {
+                        new AlertDialog.Builder(requireContext())
+                            .setTitle("Delete Draft")
+                            .setMessage("Deleting this draft will also return its items to stock. Are you sure?")
+                            .setPositiveButton("Delete", (d, which) -> {
+                                databaseSystem.databaseExecutor.execute(() -> {
+                                    // REVERT items to UNSOLD before deleting draft
+                                    try {
+                                        JSONObject obj = new JSONObject(draft.jsonData);
+                                        JSONArray itemsArr = obj.optJSONArray("items");
+                                        if (itemsArr != null) {
+                                            for (int i = 0; i < itemsArr.length(); i++) {
+                                                int itemId = itemsArr.getJSONObject(i).getInt("id");
+                                                dbHelper.updateItemSoldStatus(itemId, false);
+                                            }
+                                        }
+                                    } catch (Exception e) {
+                                        Log.e(TAG, "Error reverting items on draft delete", e);
+                                    }
+
+                                    dbHelper.deleteDraft(draft.id);
+                                    mainHandler.post(() -> {
+                                        drafts.remove(draft);
+                                        if (drafts.isEmpty()) {
+                                            dialog.dismiss();
+                                            Toast.makeText(getContext(), "Drafts cleared", Toast.LENGTH_SHORT).show();
+                                        } else {
+                                            recyclerView.getAdapter().notifyDataSetChanged();
+                                        }
+                                    });
+                                });
+                            })
+                            .setNegativeButton("Cancel", null)
+                            .show();
+                    }
+                });
+
+                recyclerView.setAdapter(adapter);
+                recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+                
+                closeButton.setOnClickListener(v -> dialog.dismiss());
+                dialog.show();
+            });
+        });
+    }
+
+    private void resumeDraft(DraftItem draftItem) {
+        try {
+            clearForm();
+            JSONObject draft = new JSONObject(draftItem.jsonData);
+            nameEditText.setText(draft.optString("name"), false);
+            phoneEditText.setText(draft.optString("phone"), false);
+            villageEditText.setText(draft.optString("village"));
+            manualTotalEditText.setText(draft.optString("total"));
+
+            JSONArray itemsArr = draft.getJSONArray("items");
+            for (int i = 0; i < itemsArr.length(); i++) {
+                JSONObject itemObj = itemsArr.getJSONObject(i);
+                selectedItemsList.add(new SelectedItem(
+                    itemObj.getInt("id"),
+                    itemObj.getString("name"),
+                    itemObj.getDouble("weight"),
+                    itemObj.getString("type")
+                ));
+            }
+            selectedItemAdapter.notifyDataSetChanged();
+            updateSelectedItemsEmptyState();
+            
+            databaseSystem.databaseExecutor.execute(() -> dbHelper.deleteDraft(draftItem.id));
+            Toast.makeText(getContext(), "Draft Resumed", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Log.e(TAG, "Error resuming draft", e);
+        }
+    }
+
     private void preloadStockItems() {
         synchronized (CACHE_LOCK) {
             if (cachedStockItems != null) return;
         }
         
-        backgroundExecutor.execute(() -> {
+        databaseSystem.databaseExecutor.execute(() -> {
             try {
                 List<Item> availableItemsList = dbHelper.fetchAllItems();
                 ArrayList<item_recycler_model_stocks> loadedItems = new ArrayList<>();
@@ -702,6 +905,10 @@ public class GenerateBillFragment extends Fragment {
             }
 
             itemsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+            itemsRecyclerView.setHasFixedSize(true);
+            itemsRecyclerView.setItemViewCacheSize(20);
+            itemsRecyclerView.setDrawingCacheEnabled(true);
+            itemsRecyclerView.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_HIGH);
             
             // Initialize with cached items if available
             synchronized (CACHE_LOCK) {
@@ -735,23 +942,68 @@ public class GenerateBillFragment extends Fragment {
         reusableAddItemDialog.show();
 
         // Refresh data silently in background
-        backgroundExecutor.execute(() -> {
-            List<Item> items = dbHelper.fetchAllItems();
-            ArrayList<item_recycler_model_stocks> loaded = new ArrayList<>();
-            for (Item item : items) {
-                loaded.add(new item_recycler_model_stocks(item.getId(), item.getName(), item.getWeight(), item.getType(), false));
-            }
-            
-            synchronized (CACHE_LOCK) {
-                cachedStockItems = loaded;
-            }
-
-            mainHandler.post(() -> {
-                if (reusableAddItemDialog.isShowing()) {
-                    addItemAdapter.updateData(loaded);
+        databaseSystem.databaseExecutor.execute(() -> {
+            try {
+                List<Item> items = dbHelper.fetchAllItems();
+                ArrayList<item_recycler_model_stocks> loaded = new ArrayList<>();
+                for (Item item : items) {
+                    loaded.add(new item_recycler_model_stocks(item.getId(), item.getName(), item.getWeight(), item.getType(), false));
                 }
-            });
+                
+                synchronized (CACHE_LOCK) {
+                    cachedStockItems = loaded;
+                }
+
+                mainHandler.post(() -> {
+                    if (reusableAddItemDialog != null && reusableAddItemDialog.isShowing() && addItemAdapter != null) {
+                        addItemAdapter.updateData(loaded);
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error refreshing stock data", e);
+            }
         });
+    }
+
+    private void loadSettingsAndApplyVisibility() {
+        SharedPreferences sp = requireContext().getSharedPreferences("app_settings_prefs", Context.MODE_PRIVATE);
+        boolean showKyc = sp.getBoolean("enable_customer_photo", true);
+        if (kycContainer != null) {
+            kycContainer.setVisibility(showKyc ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    private void takeKycPhoto() {
+        Intent takePictureIntent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+        if (takePictureIntent.resolveActivity(requireActivity().getPackageManager()) != null) {
+            startActivityForResult(takePictureIntent, 1001);
+        }
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 1001 && resultCode == android.app.Activity.RESULT_OK && data != null) {
+            android.graphics.Bitmap imageBitmap = (android.graphics.Bitmap) data.getExtras().get("data");
+            if (kycImageView != null) {
+                kycImageView.setImageBitmap(imageBitmap);
+                kycImageView.setPadding(0, 0, 0, 0);
+            }
+            saveKycPhotoLocally(imageBitmap);
+        }
+    }
+
+    private void saveKycPhotoLocally(android.graphics.Bitmap bitmap) {
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+        String fileName = "KYC_" + timeStamp + ".jpg";
+        File storageDir = requireContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        File imageFile = new File(storageDir, fileName);
+        try (FileOutputStream out = new FileOutputStream(imageFile)) {
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, out);
+            currentKycPhotoPath = imageFile.getAbsolutePath();
+        } catch (IOException e) {
+            Log.e(TAG, "Error saving KYC photo", e);
+        }
     }
 
     private void validateAndShowFinalizeDialog() {
@@ -831,11 +1083,18 @@ public class GenerateBillFragment extends Fragment {
         LinearLayout dueDateContainer = dialog.findViewById(R.id.dialog_due_date_container);
         TextView dueDateTextView = dialog.findViewById(R.id.dialog_due_date_text);
         com.google.android.material.button.MaterialButton pickDueDateButton = dialog.findViewById(R.id.dialog_pick_due_date_button);
+        TextView pdcDateTextView = dialog.findViewById(R.id.dialog_pdc_date_text);
+        com.google.android.material.button.MaterialButton pickPdcButton = dialog.findViewById(R.id.dialog_pick_pdc_button);
+        View pdcContainer = dialog.findViewById(R.id.dialog_pdc_container);
         TextView finalTotalTextView = dialog.findViewById(R.id.dialog_final_total_textview);
         View upiQrContainer = dialog.findViewById(R.id.upi_qr_container);
         android.widget.ImageView upiQrImage = dialog.findViewById(R.id.upi_qr_image);
         Button cancelButton = dialog.findViewById(R.id.dialog_cancel_button);
         Button saveButton = dialog.findViewById(R.id.dialog_save_button);
+
+        SharedPreferences sp = requireContext().getSharedPreferences("app_settings_prefs", Context.MODE_PRIVATE);
+        boolean showPdc = sp.getBoolean("enable_pdc", true);
+        if (pdcContainer != null) pdcContainer.setVisibility(showPdc ? View.VISIBLE : View.GONE);
 
         if (totalTextView == null || amountPaidEditText == null || updateTotalSwitch == null ||
                 debtTextView == null || dueDateContainer == null || dueDateTextView == null || pickDueDateButton == null ||
@@ -866,6 +1125,11 @@ public class GenerateBillFragment extends Fragment {
 
         final String[] selectedDueDateIso = {null};
         pickDueDateButton.setOnClickListener(v -> showDueDatePicker(selectedDueDateIso, dueDateTextView));
+
+        final String[] selectedPdcDateIso = {null};
+        if (pickPdcButton != null) {
+            pickPdcButton.setOnClickListener(v -> showDueDatePicker(selectedPdcDateIso, pdcDateTextView));
+        }
 
         TextWatcher amountWatcher = new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -943,6 +1207,7 @@ public class GenerateBillFragment extends Fragment {
             final double saveGstPercent = gstPercent;
             final double saveDebtToAdd = debtToAdd;
             final String saveDebtDueDate = selectedDueDateIso[0];
+            final String savePdcDate = selectedPdcDateIso[0];
             final double saveBilledAmount = updateBillTotal ? amountPaid : finalTotal;
             final double saveAmountPaid = amountPaid;
 
@@ -952,14 +1217,14 @@ public class GenerateBillFragment extends Fragment {
                         .setMessage("A bill with the same customer phone and similar billed amount was saved in the last 10 minutes. Save anyway?")
                         .setNegativeButton("Cancel", null)
                         .setPositiveButton("Save Anyway", (d, which) -> {
-                            saveBillToDatabase(saveFinalAmountToSave, saveGstPercent, saveDebtToAdd, saveDebtDueDate, saveBilledAmount, saveAmountPaid);
+                            saveBillToDatabase(saveFinalAmountToSave, saveGstPercent, saveDebtToAdd, saveDebtDueDate, saveBilledAmount, saveAmountPaid, savePdcDate);
                             dialog.dismiss();
                         })
                         .show();
                 return;
             }
 
-            saveBillToDatabase(saveFinalAmountToSave, saveGstPercent, saveDebtToAdd, saveDebtDueDate, saveBilledAmount, saveAmountPaid);
+            saveBillToDatabase(saveFinalAmountToSave, saveGstPercent, saveDebtToAdd, saveDebtDueDate, saveBilledAmount, saveAmountPaid, savePdcDate);
             dialog.dismiss();
         });
 
@@ -1082,14 +1347,9 @@ public class GenerateBillFragment extends Fragment {
         }
     }
 
-    private void saveBillToDatabase(double finalTotalAmount, double gstPercent, double debtToAdd, String debtDueDateIso, double billedAmount, double paidAmount) {
+    private void saveBillToDatabase(double finalTotalAmount, double gstPercent, double debtToAdd, String debtDueDateIso, double billedAmount, double paidAmount, String pdcDate) {
         Log.i(TAG, "Attempting to save bill. Final Amount: " + finalTotalAmount + ", GST: " + gstPercent + "%, DebtToAdd: " + debtToAdd);
         
-        if (editingBillId != -1) {
-            // Revert inventory and debt changes for the OLD version of this bill before saving new one
-            revertBillEffects(editingBillId);
-        }
-
         String name = nameEditText.getText().toString().trim();
         String phone = phoneEditText.getText().toString().trim();
         String village = villageEditText.getText().toString().trim();
@@ -1097,87 +1357,71 @@ public class GenerateBillFragment extends Fragment {
 
         int selectedPaymentModeId = paymentModeRadioGroup.getCheckedRadioButtonId();
         RadioButton selectedRadioButton = paymentModeRadioGroup.findViewById(selectedPaymentModeId);
-        String paymentMode = "Cash"; // Default payment mode
-        if (selectedRadioButton != null) {
-            paymentMode = selectedRadioButton.getText().toString();
-        }
+        String paymentMode = selectedRadioButton != null ? selectedRadioButton.getText().toString() : "Cash";
 
-        long customerId = dbHelper.insertOrGetCustomer(name, phone, village);
-        if (customerId == -1) {
-            Log.e(TAG, "CRITICAL: Failed to get or insert customer data for phone: " + phone);
-            Toast.makeText(getContext(), "Error saving customer data. Bill not saved.", Toast.LENGTH_LONG).show();
-            return;
-        }
-        Log.d(TAG, "Obtained customer ID: " + customerId);
+        // Snapshot the items to save, to avoid concurrent modification if list is cleared
+        ArrayList<SelectedItem> itemsToSave = new ArrayList<>(selectedItemsList);
+        ArrayList<ReturnItem> returnsToSave = new ArrayList<>(returnItemsList);
+        boolean isReturnApplied = returnItemSwitch.isChecked();
+        String kycPath = currentKycPhotoPath;
 
-        double netDebtChange = billedAmount - paidAmount;
-        boolean debtWasUpdated = false;
-        if (Math.abs(netDebtChange) > 0.001) {
-            Log.d(TAG, "Applying net debt change " + netDebtChange + " for customer ID: " + customerId);
-            int updatedRows = dbHelper.updateCustomerDebt(customerId, netDebtChange);
-            if (updatedRows <= 0) {
-                Log.e(TAG, "Failed to update debt for customer ID: " + customerId + ". Bill will still be saved.");
-                Toast.makeText(getContext(), "Warning: Could not update customer debt record.", Toast.LENGTH_SHORT).show();
-            } else {
-                debtWasUpdated = true;
-                if (netDebtChange > 0) {
-                    Log.i(TAG, "Successfully added debt " + netDebtChange + " to customer ID: " + customerId);
-                } else {
-                    Log.i(TAG, "Successfully added credit/payment adjustment " + Math.abs(netDebtChange) + " to customer ID: " + customerId);
+        databaseSystem.databaseExecutor.execute(() -> {
+            try {
+                if (editingBillId != -1) {
+                    revertBillEffects(editingBillId);
                 }
-            }
-        }
 
-        List<ReturnItem> finalReturnItems = new ArrayList<>();
-        if (returnItemSwitch.isChecked()) {
-            finalReturnItems.addAll(returnItemsList);
-        }
-
-        double billDebtAmount = Math.max(0.0, billedAmount - paidAmount);
-        String billDebtDueDate = billDebtAmount > 0.001 ? debtDueDateIso : null;
-        Integer explicitId = (editingBillId != -1) ? editingBillId : null;
-        long billId = dbHelper.insertBill(explicitId, customerId, 0.0, 0.0, finalTotalAmount, gstPercent, paymentMode, paymentDetails, selectedItemsList, finalReturnItems, billDebtDueDate, billDebtAmount, billedAmount, paidAmount);
-        
-        if (billId != -1) {
-            Log.i(TAG, "Bill #" + billId + " saved to database successfully!");
-            
-            // Mark items as sold
-            for (SelectedItem item : selectedItemsList) {
-                dbHelper.updateItemSoldStatus(item.getId(), true);
-            }
-
-            if (debtWasUpdated && Math.abs(netDebtChange) > 0.001) {
-                double resultingBalance = dbHelper.getCustomerDebt(customerId);
-                String note = netDebtChange > 0
-                        ? "Debt added from bill"
-                        : "Credit/extra payment adjusted against old debt";
-                long updateRecordId = dbHelper.insertDebtUpdate(customerId, billId, netDebtChange, resultingBalance, billedAmount, paidAmount, billDebtDueDate, note);
-                if (updateRecordId > 0) {
-                    Log.i(TAG, "Debt update record #" + updateRecordId + " saved for customer #" + customerId + " with change " + netDebtChange);
-                } else {
-                    Log.e(TAG, "CRITICAL: Failed to save debt update record for bill #" + billId + " (returned id: " + updateRecordId + ")");
+                long customerId = dbHelper.insertOrGetCustomer(name, phone, village);
+                if (customerId == -1) {
+                    mainHandler.post(() -> Toast.makeText(getContext(), "Error saving customer. Bill aborted.", Toast.LENGTH_LONG).show());
+                    return;
                 }
+
+                // Update photo if captured
+                if (kycPath != null) {
+                    dbHelper.updateCustomer(customerId, name, village, dbHelper.getCustomerDebt(customerId), kycPath);
+                }
+
+                double netDebtChange = billedAmount - paidAmount;
+                boolean debtWasUpdated = false;
+                if (Math.abs(netDebtChange) > 0.001) {
+                    int updatedRows = dbHelper.updateCustomerDebt(customerId, netDebtChange);
+                    debtWasUpdated = updatedRows > 0;
+                }
+
+                List<ReturnItem> finalReturnItems = isReturnApplied ? returnsToSave : new ArrayList<>();
+                double billDebtAmount = Math.max(0.0, billedAmount - paidAmount);
+                String billDebtDueDate = billDebtAmount > 0.001 ? debtDueDateIso : null;
+                Integer explicitId = (editingBillId != -1) ? editingBillId : null;
+
+                long billId = dbHelper.insertBill(explicitId, customerId, 0.0, 0.0, finalTotalAmount, gstPercent, paymentMode, paymentDetails, itemsToSave, finalReturnItems, billDebtDueDate, billDebtAmount, billedAmount, paidAmount, pdcDate);
+
+                if (billId != -1) {
+                    for (SelectedItem item : itemsToSave) {
+                        dbHelper.updateItemSoldStatus(item.getId(), true);
+                    }
+
+                    if (debtWasUpdated && Math.abs(netDebtChange) > 0.001) {
+                        double resultingBalance = dbHelper.getCustomerDebt(customerId);
+                        String note = netDebtChange > 0 ? "Debt added from bill" : "Credit adjustment";
+                        dbHelper.insertDebtUpdate(customerId, billId, netDebtChange, resultingBalance, billedAmount, paidAmount, billDebtDueDate, note);
+                    }
+
+                    mainHandler.post(() -> {
+                        if (isAdded()) {
+                            Toast.makeText(getContext(), "Bill #" + billId + " Generated!", Toast.LENGTH_SHORT).show();
+                            autoShareBillViaWhatsApp((int) billId, phone);
+                            clearForm();
+                        }
+                    });
+                } else {
+                    mainHandler.post(() -> Toast.makeText(getContext(), "Failed to save bill details.", Toast.LENGTH_LONG).show());
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Critical error saving bill", e);
+                mainHandler.post(() -> Toast.makeText(getContext(), "Database Error while saving.", Toast.LENGTH_LONG).show());
             }
-            Toast.makeText(getContext(), "Bill #" + billId + " Generated Successfully!", Toast.LENGTH_LONG).show();
-            
-            // Auto-trigger WhatsApp Share
-            autoShareBillViaWhatsApp((int) billId, phone);
-            
-            clearForm();
-        } else {
-            Log.e(TAG, "CRITICAL: Failed to save bill details to database for customer ID: " + customerId);
-            Toast.makeText(getContext(), "Failed to save bill details.", Toast.LENGTH_LONG).show();
-            if (debtWasUpdated && Math.abs(netDebtChange) > 0.001) {
-                Log.w(TAG, "Bill save failed. Attempting to revert debt update for customer ID: " + customerId);
-                dbHelper.updateCustomerDebt(customerId, -netDebtChange);
-            }
-            Log.w(TAG, "Attempting to mark items unsold again due to bill save failure...");
-            for (SelectedItem item : selectedItemsList) {
-                dbHelper.updateItemSoldStatus(item.getId(), false);
-            }
-            Log.e(TAG, "Bill save failed. Debt reversal attempted. Item 'sold' status reverted. Items are still in the list on screen.");
-            Toast.makeText(getContext(), "Items added back to stock due to save error.", Toast.LENGTH_LONG).show();
-        }
+        });
     }
 
     private void autoShareBillViaWhatsApp(int billId, String phoneNumber) {
@@ -1211,8 +1455,35 @@ public class GenerateBillFragment extends Fragment {
         }
     }
 
+    private void confirmClearForm() {
+        if (selectedItemsList.isEmpty() && nameEditText.getText().toString().isEmpty()) {
+            clearForm();
+            return;
+        }
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Clear All Details?")
+                .setMessage("This will remove all items and customer details. Are you sure?")
+                .setPositiveButton("Clear", (dialog, which) -> {
+                    // IMPORTANT: We need to return items to stock if they were marked sold
+                    for (SelectedItem item : selectedItemsList) {
+                        dbHelper.updateItemSoldStatus(item.getId(), false);
+                    }
+                    clearForm();
+                    Toast.makeText(getContext(), "Form cleared", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
     private void clearForm() {
         Log.d(TAG, "Clearing the form.");
+        
+        // IMPORTANT: If we were editing a bill or a draft was loaded, 
+        // we should NOT mark items as unsold here automatically,
+        // UNLESS the user explicitly cancelled.
+        // For simple clear, if items were marked sold in DB, they stay sold.
+
         editingBillId = -1;
         if (generateBillButton != null) generateBillButton.setText("Review & Finalize Bill");
 
@@ -1225,6 +1496,11 @@ public class GenerateBillFragment extends Fragment {
         if(paymentModeRadioGroup != null) paymentModeRadioGroup.check(R.id.cash_radio_button);
         if(paymentDetailsEditText != null) paymentDetailsEditText.setText("");
         if(returnItemSwitch != null) returnItemSwitch.setChecked(false);
+        currentKycPhotoPath = null;
+        if (kycImageView != null) {
+            kycImageView.setImageResource(android.R.drawable.ic_menu_camera);
+            kycImageView.setPadding(16, 16, 16, 16);
+        }
         selectedItemsList.clear();
         returnItemsList.clear();
         if(selectedItemAdapter != null) selectedItemAdapter.notifyDataSetChanged();
@@ -1315,9 +1591,19 @@ public class GenerateBillFragment extends Fragment {
     }
 
     @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        mainHandler.removeCallbacksAndMessages(null);
+        if (reusableAddItemDialog != null && reusableAddItemDialog.isShowing()) {
+            reusableAddItemDialog.dismiss();
+        }
+        reusableAddItemDialog = null;
+        addItemAdapter = null;
+    }
+
+    @Override
     public void onDestroy() {
         super.onDestroy();
-        backgroundExecutor.shutdownNow();
     }
 
     @Override

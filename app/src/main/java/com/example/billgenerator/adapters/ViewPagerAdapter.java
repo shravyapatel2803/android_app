@@ -16,6 +16,10 @@ import com.example.billgenerator.fragments.StatsFragment;
 import com.example.billgenerator.fragments.DebtCustomersFragment;
 import com.example.billgenerator.fragments.SupplierManagementFragment;
 import com.example.billgenerator.fragments.StockManagementFragment;
+import com.example.billgenerator.fragments.WorkerLedgerFragment;
+
+
+import com.example.billgenerator.fragments.SettingsFragment;
 
 
 public class ViewPagerAdapter extends FragmentStateAdapter {
@@ -39,10 +43,12 @@ public class ViewPagerAdapter extends FragmentStateAdapter {
             case 8: return new CollectionModeFragment();
             case 9: return new ShopProfileFragment();
             case 10: return new SupplierManagementFragment();
+            case 11: return new WorkerLedgerFragment();
+            case 12: return new SettingsFragment();
             default: return new DashboardFragment();
         }
     }
 
     @Override
-    public int getItemCount() { return 11; }
+    public int getItemCount() { return 13; }
 }

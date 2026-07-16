@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">बिल जनरेटर</string>
+    <string name="nav_dashboard">डैशबोर्ड</string>
+    <string name="nav_generate_bill">बिल बनाएं</string>
+    <string name="nav_bill_history">बिल इतिहास</string>
+    <string name="nav_customers">ग्राहक</string>
+    <string name="nav_stock">स्टॉक</string>
+    <string name="nav_settings">सेटिंग्स</string>
+    <string name="tax_invoice">TAX INVOICE</string>
+</resources>
