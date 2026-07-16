@@ -2,7 +2,7 @@
     <string name="app_name">Bill Generator</string>
     <string name="generateBillButton">Generate Bill</string>
     <string name="StockManagementButton">Stock Management</string>
-    <string name="customerName">Enter Customer Name</string>
+    <string name="customerName">Customer Name</string>
     <string name="customerPhone">Enter Customer Phone</string>
     <string name="customerVillage">Enter Customer Village/Town/City</string>
     <string name="enter_gold_rate">Enter Gold Rate</string>

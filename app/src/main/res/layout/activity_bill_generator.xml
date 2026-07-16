@@ -1,16 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/jewells_surface"
+    android:orientation="vertical"
     tools:context=".fragments.GenerateBillFragment">
 
+    <!-- Scrollable Content -->
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/bill_scroll_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -19,7 +23,7 @@
             android:padding="16dp"
             android:clipToPadding="false">
 
-            <!-- Header Card -->
+            <!-- Premium Header -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -33,8 +37,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
-
+                    android:padding="24dp">
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -42,18 +45,17 @@
                         android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
                         android:textColor="@color/white"
                         android:textStyle="bold" />
-
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Complete the details below to generate a professional bill."
+                        android:text="Complete details to generate a professional bill."
                         android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
                         android:textColor="#B0C4DE" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Customer Section -->
+            <!-- Customer Details Card -->
             <com.google.android.material.card.MaterialCardView
                 style="@style/Widget.Jewells.Card"
                 android:layout_width="match_parent"
@@ -69,7 +71,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Customer Information"
+                        android:text="Customer Details"
                         android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                         android:textColor="?attr/colorPrimary"
                         android:textStyle="bold" />
@@ -79,10 +81,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:hint="Customer Name"
-                        app:startIconDrawable="@drawable/ic_empty_items"
-                        app:startIconTint="?attr/colorPrimary">
-
+                        android:hint="@string/customerName"
+                        app:startIconDrawable="@drawable/ic_empty_items">
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
                             android:id="@+id/name_editText"
                             android:layout_width="match_parent"
@@ -97,9 +97,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:hint="Phone Number"
-                        app:startIconDrawable="@drawable/ic_phone"
-                        app:startIconTint="?attr/colorPrimary">
-
+                        app:startIconDrawable="@drawable/ic_phone">
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
                             android:id="@+id/phone_editText"
                             android:layout_width="match_parent"
@@ -113,27 +111,17 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:padding="8dp"
+                        android:padding="12dp"
                         android:background="@drawable/pdf_header_strip_bg"
                         android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                        android:visibility="gone"
-                        tools:text="Existing customer found. Debt: ₹5,000"
-                        tools:visibility="visible" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:text="Quick Select"
-                        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        android:visibility="gone" />
 
                     <HorizontalScrollView
+                        android:id="@+id/recent_customers_scroll"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:scrollbars="none">
-
                         <LinearLayout
                             android:id="@+id/recent_customers_container"
                             android:layout_width="wrap_content"
@@ -147,9 +135,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:hint="Village / City"
-                        app:startIconDrawable="@drawable/ic_location"
-                        app:startIconTint="?attr/colorPrimary">
-
+                        app:startIconDrawable="@drawable/ic_location">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/village_editText"
                             android:layout_width="match_parent"
@@ -159,7 +145,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Items Section -->
+            <!-- Items Purchased Card -->
             <com.google.android.material.card.MaterialCardView
                 style="@style/Widget.Jewells.Card"
                 android:layout_width="match_parent"
@@ -172,94 +158,94 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <RelativeLayout
+                    <androidx.constraintlayout.widget.ConstraintLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content">
-
                         <TextView
-                            android:layout_width="wrap_content"
+                            android:id="@+id/items_summary_title"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_centerVertical="true"
                             android:text="Items Summary"
                             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                             android:textColor="?attr/colorPrimary"
-                            android:textStyle="bold" />
+                            android:textStyle="bold"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintEnd_toStartOf="@+id/item_actions_container"/>
 
                         <LinearLayout
+                            android:id="@+id/item_actions_container"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_alignParentEnd="true"
-                            android:orientation="horizontal">
-
+                            android:orientation="horizontal"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintBottom_toBottomOf="parent">
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btn_scan_barcode"
                                 style="@style/Widget.Material3.Button.TextButton"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:minWidth="0dp"
                                 android:text="Scan"
+                                android:paddingHorizontal="8dp"
                                 app:icon="@drawable/ic_camera"
                                 app:iconTint="?attr/colorSecondary"/>
-
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/add_button_new_item"
                                 style="@style/Widget.Material3.Button.TextButton"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:minWidth="0dp"
                                 android:text="Add Manual"
+                                android:paddingHorizontal="8dp"
                                 app:icon="@drawable/ic_add"
                                 app:iconTint="?attr/colorSecondary"/>
                         </LinearLayout>
-                    </RelativeLayout>
+                    </androidx.constraintlayout.widget.ConstraintLayout>
 
                     <FrameLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:minHeight="100dp">
-
+                        android:layout_marginTop="16dp"
+                        android:minHeight="120dp">
                         <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/item_recycler_view"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             tools:listitem="@layout/selected_item_layout" />
-
                         <include
                             android:id="@+id/generate_bill_items_empty"
-                            layout="@layout/view_empty_state"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content" />
+                            layout="@layout/view_empty_state" />
                     </FrameLayout>
 
-                    <View
+                    <com.google.android.material.divider.MaterialDivider
                         android:layout_width="match_parent"
-                        android:layout_height="1dp"
+                        android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:layout_marginBottom="16dp"
-                        android:background="?attr/colorOutlineVariant" />
+                        android:layout_marginBottom="16dp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
-
                         <com.google.android.material.switchmaterial.SwitchMaterial
                             android:id="@+id/gst_switch"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Include GST "
-                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
-
+                            android:text="Include GST"
+                            android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
                         <com.google.android.material.textfield.TextInputLayout
                             android:id="@+id/gst_percentage_layout"
                             style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
                             android:layout_width="100dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="16dp"
+                            android:layout_marginStart="24dp"
                             android:hint="GST %"
                             android:visibility="gone"
                             tools:visibility="visible">
-
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/gst_percentage_editText"
                                 android:layout_width="match_parent"
@@ -276,7 +262,6 @@
                         android:hint="Final Amount to Pay (₹)"
                         app:hintTextColor="?attr/colorSecondary"
                         app:boxStrokeColor="?attr/colorSecondary">
-
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/manual_total_editText"
                             android:layout_width="match_parent"
@@ -286,16 +271,15 @@
                             android:textColor="?attr/colorSecondary"
                             android:textStyle="bold" />
                     </com.google.android.material.textfield.TextInputLayout>
-
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Payment & Return Section -->
+            <!-- Payment Card -->
             <com.google.android.material.card.MaterialCardView
                 style="@style/Widget.Jewells.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="100dp">
+                android:layout_marginBottom="32dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -315,21 +299,19 @@
                         android:id="@+id/payment_mode_radio_group"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="12dp"
                         android:orientation="horizontal">
-
                         <RadioButton
                             android:id="@+id/cash_radio_button"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Cash Payment"
                             android:checked="true" />
-
                         <RadioButton
                             android:id="@+id/online_radio_button"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="16dp"
+                            android:layout_marginStart="24dp"
                             android:text="Online / UPI" />
                     </RadioGroup>
 
@@ -339,27 +321,20 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:hint="Transaction ID / Details"
-                        android:visibility="gone"
-                        tools:visibility="visible">
-
+                        android:hint="Transaction Details"
+                        android:visibility="gone">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/payment_details_editText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.divider.MaterialDivider
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:layout_marginBottom="16dp" />
-
                     <com.google.android.material.switchmaterial.SwitchMaterial
                         android:id="@+id/return_item_switch"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Old metal return included"
+                        android:layout_marginTop="16dp"
+                        android:text="Include Old metal return"
                         android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
 
                     <LinearLayout
@@ -367,59 +342,64 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:visibility="gone"
-                        tools:visibility="visible">
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="Return Metal Type"
+                            android:textAppearance="@style/TextAppearance.Material3.LabelLarge" />
 
                         <RadioGroup
                             android:id="@+id/return_item_type_radio_group"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:layout_marginTop="8dp">
-
+                            android:layout_marginTop="8dp"
+                            android:orientation="horizontal">
                             <RadioButton
-                                android:id="@+id/return_gold_radio_button"
+                                android:id="@+id/return_gold_radio"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Gold"
-                                android:checked="true"/>
-
+                                android:checked="true" />
                             <RadioButton
-                                android:id="@+id/return_silver_radio_button"
+                                android:id="@+id/return_silver_radio"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="16dp"
                                 android:text="Silver" />
+                            <RadioButton
+                                android:id="@+id/return_other_radio"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="16dp"
+                                android:text="Other" />
                         </RadioGroup>
 
                         <LinearLayout android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal">
-
+                            android:orientation="horizontal"
+                            android:layout_marginTop="8dp">
                             <com.google.android.material.textfield.TextInputLayout
                                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:layout_marginTop="8dp"
                                 android:layout_marginEnd="8dp"
                                 android:hint="Weight (g)">
-
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/return_item_weight_editText"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:inputType="numberDecimal" />
                             </com.google.android.material.textfield.TextInputLayout>
-
                             <com.google.android.material.textfield.TextInputLayout
                                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1.2"
-                                android:layout_marginTop="8dp"
                                 android:hint="Deduct (₹)">
-
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/return_item_deduct_amount_editText"
                                     android:layout_width="match_parent"
@@ -427,7 +407,6 @@
                                     android:inputType="numberDecimal" />
                             </com.google.android.material.textfield.TextInputLayout>
                         </LinearLayout>
-
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/add_return_item_button"
                             style="@style/Widget.Material3.Button.TonalButton"
@@ -441,8 +420,8 @@
                             android:id="@+id/return_items_recycler_view"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp" />
-
+                            android:layout_marginTop="12dp"
+                            tools:listitem="@layout/selected_item_layout" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -450,20 +429,28 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Floating Generate Button -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/generate_bill_button"
+    <!-- Guaranteed Non-Overlapping Bottom Action -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/bottom_action_bar"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:layout_gravity="bottom|center_horizontal"
-        android:layout_margin="16dp"
-        android:text="Review &amp; Finalize Bill"
-        android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-        android:textColor="@color/white"
-        app:cornerRadius="20dp"
-        app:elevation="8dp"
-        app:icon="@drawable/ic_receipt"
-        app:iconPadding="12dp"
-        app:backgroundTint="?attr/colorSecondary" />
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="0dp"
+        app:cardElevation="16dp"
+        app:strokeWidth="0dp"
+        app:cardBackgroundColor="@color/jewells_surface">
 
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/generate_bill_button"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_margin="16dp"
+            android:text="Review &amp; Finalize Bill"
+            android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+            android:textColor="@color/white"
+            app:cornerRadius="16dp"
+            app:icon="@drawable/ic_receipt"
+            app:iconPadding="12dp"
+            app:backgroundTint="?attr/colorSecondary" />
+    </com.google.android.material.card.MaterialCardView>
+
+</LinearLayout>

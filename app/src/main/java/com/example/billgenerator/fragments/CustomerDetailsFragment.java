@@ -13,7 +13,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
-import android.text.TextUtils; 
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -24,26 +23,27 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.view.MenuProvider;
+import androidx.lifecycle.Lifecycle;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SearchView;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import com.google.android.material.chip.ChipGroup;
 
 import com.example.billgenerator.R;
 import com.example.billgenerator.MainActivity;
 import com.example.billgenerator.adapters.customer_recycler_adapter;
 import com.example.billgenerator.database.databaseSystem;
+import com.example.billgenerator.databinding.FragmentCustomerDetailsBinding;
 import com.example.billgenerator.models.customer_recycler_model; 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.example.billgenerator.ui.UiAnimationHelper;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -52,7 +52,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
-import java.util.Objects;
 
 
 public class CustomerDetailsFragment extends Fragment {
@@ -64,13 +63,10 @@ public class CustomerDetailsFragment extends Fragment {
         CLEAR
     }
 
-    private RecyclerView recyclerView;
-    private FloatingActionButton fab;
+    private FragmentCustomerDetailsBinding binding;
     private customer_recycler_adapter adapter;
     private ArrayList<customer_recycler_model> customerList = new ArrayList<>();
     private databaseSystem dbHelper;
-    private View emptyView;
-    private TextView totalCountText, totalDebtText;
     private static final String TAG = "CustomerDetailsFrag"; 
     private final NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
     private CustomerBalanceFilter selectedBalanceFilter = CustomerBalanceFilter.ALL;
@@ -80,7 +76,6 @@ public class CustomerDetailsFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
         Log.d(TAG, "onCreate called");
     }
 
@@ -88,7 +83,14 @@ public class CustomerDetailsFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         Log.d(TAG, "onCreateView called");
-        return inflater.inflate(R.layout.activity_customer_details, container, false);
+        binding = FragmentCustomerDetailsBinding.inflate(inflater, container, false);
+        return binding.getRoot();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
     }
 
     @Override
@@ -96,30 +98,70 @@ public class CustomerDetailsFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         Log.d(TAG, "onViewCreated called");
 
+        requireActivity().addMenuProvider(new MenuProvider() {
+            @Override
+            public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+                menuInflater.inflate(R.menu.customer_details_menu, menu);
+                MenuItem searchItem = menu.findItem(R.id.action_search);
+                SearchView searchView = (SearchView) searchItem.getActionView();
+                if (searchView != null) {
+                    searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+                        @Override
+                        public boolean onQueryTextSubmit(String query) {
+                            searchQuery = query == null ? "" : query;
+                            applyCustomerFilters();
+                            return false;
+                        }
+
+                        @Override
+                        public boolean onQueryTextChange(String newText) {
+                            searchQuery = newText == null ? "" : newText;
+                            applyCustomerFilters();
+                            return false;
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public boolean onMenuItemSelected(@NonNull MenuItem menuItem) {
+                if (menuItem.getItemId() == R.id.action_generate_pdf) {
+                    generateCustomersPdf();
+                    return true;
+                }
+                return false;
+            }
+        }, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
+
         dbHelper = new databaseSystem(getContext());
-        recyclerView = view.findViewById(R.id.customer_detail_recyclerView);
-        fab = view.findViewById(R.id.fab_add_customer);
-        emptyView = view.findViewById(R.id.empty_view_include);
-        totalCountText = view.findViewById(R.id.customer_total_count);
-        totalDebtText = view.findViewById(R.id.customer_total_debt);
 
-        // Customize empty state
-        TextView emptyTitle = emptyView.findViewById(R.id.empty_state_title);
-        TextView emptySubtitle = emptyView.findViewById(R.id.empty_state_subtitle);
-
-        if (emptyTitle != null) emptyTitle.setText("No Customers Found");
-        if (emptySubtitle != null) emptySubtitle.setText("Try adjusting your search or filters to find what you're looking for.");
+        // Customize empty state using helper
+        UiAnimationHelper.configureEmptyState(
+                binding.emptyViewInclude.getRoot(),
+                R.drawable.ic_empty_bills, // Using existing drawable
+                "No Customers Found",
+                "Try adjusting your search or filters to find what you're looking for.",
+                "Add Customer",
+                this::showAddCustomerDialog
+        );
 
         setupFilterChips(view);
 
-        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        // Dynamic column count for tablets
+        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        if (isTablet) {
+            binding.customerDetailRecyclerView.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(getContext(), 2));
+        } else {
+            binding.customerDetailRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        }
+
         adapter = new customer_recycler_adapter(requireContext(), customerList, this);
-        recyclerView.setAdapter(adapter);
+        binding.customerDetailRecyclerView.setAdapter(adapter);
 
         loadCustomersFromDB();
         openCustomerFromNotificationIfRequested();
 
-        fab.setOnClickListener(v -> {
+        binding.fabAddCustomer.setOnClickListener(v -> {
             Log.d(TAG, "FAB clicked - showing Add Customer dialog");
             showAddCustomerDialog();
         });
@@ -127,12 +169,7 @@ public class CustomerDetailsFragment extends Fragment {
     }
 
     private void setupFilterChips(View view) {
-        ChipGroup filterGroup = view.findViewById(R.id.customer_filter_group);
-        if (filterGroup == null) {
-            return;
-        }
-
-        filterGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+        binding.customerFilterGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
             if (checkedIds == null || checkedIds.isEmpty()) {
                 selectedBalanceFilter = CustomerBalanceFilter.ALL;
             } else {
@@ -185,15 +222,20 @@ public class CustomerDetailsFragment extends Fragment {
             Log.w(TAG, "fetchCustomers returned a null cursor.");
         }
 
-        if (totalCountText != null) totalCountText.setText(String.valueOf(customerList.size()));
-        if (totalDebtText != null) totalDebtText.setText(currencyFormat.format(totalDebt));
+        if (binding != null) {
+            binding.customerTotalCount.setText(String.valueOf(customerList.size()));
+            binding.customerTotalDebt.setText(currencyFormat.format(totalDebt));
+        }
 
         applyCustomerFilters();
     }
 
     private void applyCustomerFilters() {
+        if (binding == null) return;
+
         ArrayList<customer_recycler_model> filtered = new ArrayList<>();
         String search = searchQuery == null ? "" : searchQuery.trim().toLowerCase(Locale.getDefault());
+        double totalDebt = 0;
 
         for (customer_recycler_model customer : customerList) {
             boolean matchesSearch = search.isEmpty()
@@ -224,15 +266,19 @@ public class CustomerDetailsFragment extends Fragment {
 
             if (matchesBalance) {
                 filtered.add(customer);
+                if (customer.debt > 0) totalDebt += customer.debt;
             }
         }
 
+        binding.customerTotalCount.setText(String.valueOf(filtered.size()));
+        binding.customerTotalDebt.setText(currencyFormat.format(totalDebt));
+
         if (filtered.isEmpty()) {
-            recyclerView.setVisibility(View.GONE);
-            emptyView.setVisibility(View.VISIBLE);
+            binding.customerDetailRecyclerView.setVisibility(View.GONE);
+            binding.emptyViewInclude.getRoot().setVisibility(View.VISIBLE);
         } else {
-            recyclerView.setVisibility(View.VISIBLE);
-            emptyView.setVisibility(View.GONE);
+            binding.customerDetailRecyclerView.setVisibility(View.VISIBLE);
+            binding.emptyViewInclude.getRoot().setVisibility(View.GONE);
         }
 
         if (adapter != null) {
@@ -446,41 +492,7 @@ public class CustomerDetailsFragment extends Fragment {
         dialog.show();
     }
 
-    @Override
-    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
-        inflater.inflate(R.menu.customer_details_menu, menu);
-        super.onCreateOptionsMenu(menu, inflater);
-        Log.d(TAG, "onCreateOptionsMenu called");
 
-        MenuItem searchItem = menu.findItem(R.id.action_search);
-        SearchView searchView = (SearchView) searchItem.getActionView();
-
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String query) {
-                searchQuery = query == null ? "" : query;
-                applyCustomerFilters();
-                return false;
-            }
-
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                searchQuery = newText == null ? "" : newText;
-                applyCustomerFilters();
-                return false;
-            }
-        });
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        Log.d(TAG, "onOptionsItemSelected: " + item.getTitle());
-        if (item.getItemId() == R.id.action_generate_pdf) {
-            generateCustomersPdf();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
 
     private void generateCustomersPdf() {
         Log.d(TAG, "generateCustomersPdf called");

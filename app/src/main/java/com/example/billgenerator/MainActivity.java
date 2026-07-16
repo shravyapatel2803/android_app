@@ -6,6 +6,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -13,6 +15,7 @@ import android.view.View;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -31,6 +34,7 @@ import androidx.biometric.BiometricPrompt;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.billgenerator.adapters.ViewPagerAdapter;
+import com.example.billgenerator.databinding.ActivityMainBinding;
 import com.example.billgenerator.workers.DebtReminderWorker;
 import com.google.android.material.navigation.NavigationView;
 import com.example.billgenerator.security.BiometricAuthHelper;
@@ -54,11 +58,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public static final String EXTRA_OPEN_CUSTOMER_ID = "extra_open_customer_id";
     public static final String EXTRA_OPEN_BILL_ID = "extra_open_bill_id";
 
-    private ViewPager2 viewPager;
+    private ActivityMainBinding binding;
     private ViewPagerAdapter viewPagerAdapter;
-    private Toolbar toolbar;
-    private DrawerLayout drawerLayout;
-    private NavigationView navigationView;
     private ActionBarDrawerToggle drawerToggle;
 
     private boolean isAuthenticated = false;
@@ -95,24 +96,19 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "onCreate called");
-        setContentView(R.layout.activity_main);
+        binding = ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
-        toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        viewPager = findViewById(R.id.view_pager);
-        drawerLayout = findViewById(R.id.drawer_layout);
-        navigationView = findViewById(R.id.navigation_view);
+        setSupportActionBar(binding.toolbar);
 
-        if (viewPager != null) viewPager.setVisibility(View.GONE); else Log.e(TAG, "ViewPager is NULL in onCreate");
-
-        if (drawerLayout != null && toolbar != null) {
-            drawerToggle = new ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.drawer_open, R.string.drawer_close);
-            drawerLayout.addDrawerListener(drawerToggle);
+        if (binding.drawerLayout != null && binding.toolbar != null && binding.navigationView != null && binding.navigationView.getParent() == binding.drawerLayout) {
+            drawerToggle = new ActionBarDrawerToggle(this, binding.drawerLayout, binding.toolbar, R.string.drawer_open, R.string.drawer_close);
+            binding.drawerLayout.addDrawerListener(drawerToggle);
             drawerToggle.syncState();
         }
-        if (navigationView != null) {
-            navigationView.setNavigationItemSelectedListener(this);
-            navigationView.setCheckedItem(R.id.nav_dashboard);
+        if (binding.navigationView != null) {
+            binding.navigationView.setNavigationItemSelectedListener(this);
+            binding.navigationView.setCheckedItem(R.id.nav_dashboard);
         }
 
         handleLaunchIntent(getIntent());
@@ -120,6 +116,27 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         isAuthenticated = isAuthenticatedForSession;
 
         Log.d(TAG, "onCreate finished, basic views found, authentication pending.");
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (binding.drawerLayout != null && binding.navigationView != null && binding.navigationView.getParent() == binding.drawerLayout) {
+                    if (binding.drawerLayout.isDrawerOpen(binding.navigationView)) {
+                        binding.drawerLayout.closeDrawer(binding.navigationView);
+                        return;
+                    }
+                }
+                if (binding.viewPager != null && binding.viewPager.getCurrentItem() != 0) {
+                    binding.viewPager.setCurrentItem(0, false);
+                    if (binding.navigationView != null) {
+                        binding.navigationView.setCheckedItem(R.id.nav_dashboard);
+                    }
+                    return;
+                }
+                setEnabled(false);
+                getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
     }
 
     @Override
@@ -130,19 +147,16 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         if (!isAuthenticated) {
             Log.i(TAG, "User not authenticated, showing biometric prompt.");
-            if (viewPager != null) viewPager.setVisibility(View.GONE);
+            binding.viewPager.setVisibility(View.GONE);
 
             showAuthenticationPrompt();
         } else {
             Log.d(TAG, "User already authenticated, ensuring UI is visible.");
-            if (viewPager != null && viewPager.getVisibility() == View.GONE) {
+            if (binding.viewPager.getVisibility() == View.GONE) {
                 Log.d(TAG, "UI was hidden, setting up and showing.");
                 setupMainNavigation();
-            } else if (viewPager != null) {
+            } else {
                 Log.d(TAG, "UI seems already visible.");
-            }
-            else {
-                Log.e(TAG, "Cannot ensure UI visibility on resume, views are null!");
             }
         }
     }
@@ -152,21 +166,34 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         super.onNewIntent(intent);
         setIntent(intent);
         handleLaunchIntent(intent);
-        if (isAuthenticated && viewPager != null && viewPager.getAdapter() != null) {
+        if (isAuthenticated && binding.viewPager.getAdapter() != null) {
             applyPendingNavigationRequest();
         }
     }
 
     private void setupMainNavigation() {
         Log.d(TAG, "Setting up main navigation...");
-        if (viewPager == null) return;
 
-        if (viewPager.getAdapter() == null) {
+        if (binding.viewPager.getAdapter() == null) {
             viewPagerAdapter = new ViewPagerAdapter(this);
-            viewPager.setAdapter(viewPagerAdapter);
+            binding.viewPager.setAdapter(viewPagerAdapter);
         }
-        viewPager.setUserInputEnabled(false);
-        viewPager.setVisibility(View.VISIBLE);
+        binding.viewPager.setUserInputEnabled(false);
+        
+        // Show a brief loading screen to pre-load critical data
+        if (findViewById(R.id.splash_screen) != null) {
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                findViewById(R.id.splash_screen).animate()
+                        .alpha(0f)
+                        .setDuration(400)
+                        .withEndAction(() -> {
+                            findViewById(R.id.splash_screen).setVisibility(View.GONE);
+                            binding.viewPager.setVisibility(View.VISIBLE);
+                        });
+            }, 1200); // 1.2 seconds of "loading" to ensure background tasks start
+        } else {
+            binding.viewPager.setVisibility(View.VISIBLE);
+        }
 
         applyPendingNavigationRequest();
 
@@ -185,13 +212,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
     private void applyPendingNavigationRequest() {
-        if (pendingDestinationIndex < 0 || viewPager == null) {
+        if (pendingDestinationIndex < 0) {
             return;
         }
 
         int destination = pendingDestinationIndex;
         pendingDestinationIndex = -1;
-        viewPager.setCurrentItem(destination, false);
+        binding.viewPager.setCurrentItem(destination, false);
 
         if (destination == 1) { // Generate Bill
             int editBillId = getIntent().getIntExtra(EXTRA_OPEN_BILL_ID, -1);
@@ -205,8 +232,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
         }
 
-        if (navigationView != null) {
-            navigationView.setCheckedItem(getDrawerItemForDestination(destination));
+        if (binding.navigationView != null) {
+            binding.navigationView.setCheckedItem(getDrawerItemForDestination(destination));
         }
     }
 
@@ -245,7 +272,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 isAuthenticatedForSession = true;
                 runOnUiThread(() -> {
                     Log.d(TAG, "Auth Success: Setting up UI.");
-                    if (viewPager != null) {
+                    if (binding.viewPager != null) {
                         setupMainNavigation();
                     } else {
                         Log.e(TAG, "Auth Success but views became null! Cannot setup UI.");
@@ -435,7 +462,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-        if (viewPager == null) {
+        if (binding.viewPager == null) {
             return false;
         }
         int destination = 0;
@@ -463,28 +490,14 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         } else if (itemId == R.id.nav_suppliers) {
             destination = 10;
         }
-        viewPager.setCurrentItem(destination, false);
-        if (drawerLayout != null) {
-            drawerLayout.closeDrawers();
+        binding.viewPager.setCurrentItem(destination, false);
+        if (binding.drawerLayout != null) {
+            binding.drawerLayout.closeDrawers();
         }
         return true;
     }
 
-    @Override
-    public void onBackPressed() {
-        if (drawerLayout != null && drawerLayout.isDrawerOpen(navigationView)) {
-            drawerLayout.closeDrawer(navigationView);
-            return;
-        }
-        if (viewPager != null && viewPager.getCurrentItem() != 0) {
-            viewPager.setCurrentItem(0, false);
-            if (navigationView != null) {
-                navigationView.setCheckedItem(R.id.nav_dashboard);
-            }
-            return;
-        }
-        super.onBackPressed();
-    }
+
 
     @Override
     protected void onStop() {

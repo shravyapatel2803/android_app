@@ -51,6 +51,7 @@ public class item_recycler_adapter_stocks extends RecyclerView.Adapter<item_recy
         item_recycler_model_stocks model = itemList.get(position);
 
         holder.itemName.setText(model.getName());
+        holder.itemType.setText(model.getType().toUpperCase());
         holder.itemWeight.setText(String.format(Locale.getDefault(), "%.3f grams", model.getWeight()));
 
         if ("Gold".equalsIgnoreCase(model.getType())) {
@@ -119,7 +120,7 @@ public class item_recycler_adapter_stocks extends RecyclerView.Adapter<item_recy
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView itemIcon, soldIconOverlay;
-        TextView itemName, itemWeight;
+        TextView itemName, itemType, itemWeight;
         ConstraintLayout layoutRoot;
         ImageButton deleteButton;
 
@@ -127,6 +128,7 @@ public class item_recycler_adapter_stocks extends RecyclerView.Adapter<item_recy
             super(itemView);
             itemIcon = itemView.findViewById(R.id.item_icon);
             itemName = itemView.findViewById(R.id.item_name_textview);
+            itemType = itemView.findViewById(R.id.item_type_textview);
             itemWeight = itemView.findViewById(R.id.item_weight_textview);
             soldIconOverlay = itemView.findViewById(R.id.sold_icon_overlay);
             layoutRoot = itemView.findViewById(R.id.constraint_layout_root);

@@ -19,14 +19,14 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.billgenerator.R;
 import com.example.billgenerator.database.databaseSystem;
+import com.example.billgenerator.databinding.FragmentSupplierManagementBinding;
 import com.example.billgenerator.models.Supplier;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.ArrayList;
 
 public class SupplierManagementFragment extends Fragment {
 
-    private RecyclerView recyclerView;
+    private FragmentSupplierManagementBinding binding;
     private databaseSystem dbHelper;
     private ArrayList<Supplier> supplierList = new ArrayList<>();
     // private SupplierAdapter adapter; // To be implemented
@@ -34,21 +34,26 @@ public class SupplierManagementFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_supplier_management, container, false);
+        binding = FragmentSupplierManagementBinding.inflate(inflater, container, false);
+        return binding.getRoot();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         dbHelper = new databaseSystem(requireContext());
-        recyclerView = view.findViewById(R.id.supplier_recycler_view);
-        FloatingActionButton fab = view.findViewById(R.id.fab_add_supplier);
 
-        recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+        binding.supplierRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         // adapter = new SupplierAdapter(supplierList);
-        // recyclerView.setAdapter(adapter);
+        // binding.supplierRecyclerView.setAdapter(adapter);
 
-        fab.setOnClickListener(v -> showAddSupplierDialog());
+        binding.fabAddSupplier.setOnClickListener(v -> showAddSupplierDialog());
         loadSuppliers();
     }
 

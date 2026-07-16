@@ -54,8 +54,8 @@ public class PdfUtils {
             double gstPercent = billCursor.getDouble(billCursor.getColumnIndexOrThrow("gst_percent"));
             String paymentMode = billCursor.getString(billCursor.getColumnIndexOrThrow("payment_mode"));
 
-            boolean isOnline = paymentMode != null && paymentMode.contains("Online");
-            boolean isGstBill = isOnline || gstPercent > 0;
+            // Correct logic: Only use Professional layout if GST > 0
+            boolean isGstBill = gstPercent > 0.001;
 
             int layoutResId = isGstBill ? R.layout.professional_bill_layout : R.layout.estimate_bill_layout;
             billView = inflater.inflate(layoutResId, null);
@@ -68,6 +68,7 @@ public class PdfUtils {
             TextView shopMetaLine1 = billView.findViewById(R.id.shop_meta_line1_textview);
             TextView shopMetaLine2 = billView.findViewById(R.id.shop_meta_line2_textview);
             TextView shopTagline = billView.findViewById(R.id.shop_tagline_textview);
+            TextView shopGstin = billView.findViewById(R.id.shop_gstin_textview);
             TextView invoiceNo = billView.findViewById(R.id.invoice_no_value_textview);
             LinearLayout itemsContainer = billView.findViewById(R.id.items_container);
             TextView subtotal = billView.findViewById(R.id.subtotal_textview);
@@ -80,10 +81,10 @@ public class PdfUtils {
             TextView returnItemInfo = billView.findViewById(R.id.return_item_textview);
             android.widget.ImageView logoView = billView.findViewById(R.id.shop_logo_imageview);
 
-            applyShopProfileToBillHeader(context, shopNameView, shopMetaLine1, shopMetaLine2, shopTagline, logoView);
+            applyShopProfileToBillHeader(context, shopNameView, shopMetaLine1, shopMetaLine2, shopTagline, shopGstin, logoView);
 
             if (isGstBill) {
-                billTitle.setText(isOnline ? "GST Bill" : "Tax Invoice");
+                billTitle.setText("Tax Invoice");
                 gstLayout.setVisibility(View.VISIBLE);
                 double subTotalAmt = totalAmt / (1 + (gstPercent / 100));
                 double gstAmt = totalAmt - subTotalAmt;
@@ -136,7 +137,7 @@ public class PdfUtils {
         return createPdfFromView(context, billView, "bill_" + billId);
     }
 
-    private static void applyShopProfileToBillHeader(Context context, TextView shopName, TextView metaLine1, TextView metaLine2, TextView taglineView, android.widget.ImageView logoView) {
+    private static void applyShopProfileToBillHeader(Context context, TextView shopName, TextView metaLine1, TextView metaLine2, TextView taglineView, TextView gstinView, android.widget.ImageView logoView) {
         SharedPreferences prefs = context.getSharedPreferences("shop_profile_prefs", Context.MODE_PRIVATE);
         shopName.setText(prefs.getString("shop_name", "Shop"));
         
@@ -174,9 +175,32 @@ public class PdfUtils {
             }
         }
 
-        metaLine1.setText("Owner: " + owner + " | Phone: " + phone);
-        metaLine2.setText(address + (gstin.isEmpty() ? "" : " | GSTIN: " + gstin));
-        taglineView.setText(tagline);
+        if (metaLine1 != null) {
+            metaLine1.setText("Owner: " + owner + " | Phone: " + phone);
+            metaLine1.setVisibility(View.VISIBLE);
+        }
+        
+        if (metaLine2 != null) {
+            metaLine2.setText(address);
+            metaLine2.setVisibility(View.VISIBLE);
+        }
+
+        if (taglineView != null && !tagline.isEmpty()) {
+            taglineView.setText(tagline);
+            taglineView.setVisibility(View.VISIBLE);
+        } else if (taglineView != null) {
+            taglineView.setVisibility(View.GONE);
+        }
+
+        if (gstinView != null) {
+            if (!gstin.isEmpty()) {
+                gstinView.setText("GST NO: " + gstin);
+                gstinView.setVisibility(View.VISIBLE);
+            } else {
+                gstinView.setText("GST NO: NA");
+                gstinView.setVisibility(View.VISIBLE);
+            }
+        }
     }
 
     private static File createPdfFromView(Context context, View view, String filename) throws IOException {

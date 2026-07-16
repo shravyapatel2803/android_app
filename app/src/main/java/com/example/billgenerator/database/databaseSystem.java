@@ -376,7 +376,6 @@ public class databaseSystem extends SQLiteOpenHelper {
                     double weight = cursor.getDouble(weightCol);
                     String type = cursor.getString(typeCol);
                     itemList.add(new Item(id, name, weight, type));
-                    Log.d("FetchUnsold", "Found: ID=" + id + ", Name=" + name);
                 }
             } catch (Exception e) {
                 Log.e("Database", "Error fetching unsold items: " + e.getMessage());

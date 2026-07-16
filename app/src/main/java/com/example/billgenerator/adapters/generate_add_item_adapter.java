@@ -55,6 +55,15 @@ public class generate_add_item_adapter extends RecyclerView.Adapter<generate_add
         Log.d(TAG, "Adapter created. Available items source: " + this.allAvailableItemsList.size());
     }
 
+    public void updateData(ArrayList<item_recycler_model_stocks> newData) {
+        allAvailableItemsList.clear();
+        allAvailableItemsList.addAll(newData);
+        filteredAvailableItemsList.clear();
+        filteredAvailableItemsList.addAll(newData);
+        notifyDataSetChanged();
+        Log.d(TAG, "Data updated. New size: " + allAvailableItemsList.size());
+    }
+
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {

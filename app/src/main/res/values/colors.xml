@@ -12,10 +12,13 @@
     <color name="pink">#FFFF4800</color>
     <color name="brown">#FF8B4513</color>
     <color name="teal">#FF008080</color>
+    <color name="teal_primary">#009688</color>
+    <color name="teal_dark">#00796B</color>
     <color name="moreblue">#2196F3</color>
     <color name="blue_dark">#1976D2</color>
 
     <!-- Jewells Manager — Premium Navy & Gold palette -->
+    <!-- Light Mode -->
     <color name="jewells_navy">#0B1F3A</color>
     <color name="jewells_navy_light">#123A63</color>
     <color name="jewells_navy_container">#D8E6F7</color>
@@ -36,11 +39,12 @@
     <color name="jewells_gradient_center">#E3ECF7</color>
     <color name="jewells_gradient_end">#D8E4F2</color>
 
-    <!-- Legacy aliases kept for compatibility -->
-    <color name="teal_primary">#004D40</color>
-    <color name="teal_dark">#00251A</color>
-    <color name="gold_text">#FFD700</color>
+    <!-- Semantic Colors -->
+    <color name="status_error">#B00020</color>
+    <color name="status_success">#2E7D32</color>
+    <color name="status_warning">#F9A825</color>
 
+    <!-- Material Design Theme Mapping -->
     <color name="md_theme_primary">@color/jewells_navy_light</color>
     <color name="md_theme_onPrimary">@color/white</color>
     <color name="md_theme_primaryContainer">@color/jewells_navy_container</color>
@@ -55,4 +59,6 @@
     <color name="md_theme_onBackground">@color/jewells_on_surface</color>
     <color name="md_theme_surface">@color/jewells_surface</color>
     <color name="md_theme_onSurface">@color/jewells_on_surface</color>
+    <color name="md_theme_error">@color/status_error</color>
+    <color name="md_theme_onError">@color/white</color>
 </resources>

@@ -81,7 +81,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
+        android:layout_marginTop="6dp"
         android:background="@drawable/pdf_section_border"
         android:orientation="horizontal"
         android:paddingStart="8dp"
@@ -90,9 +90,10 @@
         android:paddingBottom="6dp">
 
         <TextView
+            android:id="@+id/shop_gstin_textview"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="0.9"
+            android:layout_weight="1"
             android:text="GST NO: NA"
             android:textColor="#111111"
             android:textSize="10sp"
@@ -102,7 +103,7 @@
             android:id="@+id/bill_title_textview"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1.1"
+            android:layout_weight="1"
             android:gravity="center"
             android:text="TAX INVOICE"
             android:textColor="#111111"
@@ -112,7 +113,7 @@
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1.2"
+            android:layout_weight="1"
             android:gravity="end"
             android:text="ORIGINAL FOR RECIPIENT"
             android:textColor="#111111"

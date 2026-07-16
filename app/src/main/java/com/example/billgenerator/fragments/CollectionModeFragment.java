@@ -1,6 +1,8 @@
 package com.example.billgenerator.fragments;
 
 import android.Manifest;
+import android.app.Activity;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.location.Address;
@@ -285,6 +287,9 @@ public class CollectionModeFragment extends Fragment {
             Map<String, double[]> coordinatesByVillage = new HashMap<>();
 
             for (DebtCustomerItem item : allDebtItems) {
+                if (!isAdded()) {
+                    return;
+                }
                 String village = item.village == null ? "" : item.village.trim();
                 if (village.isEmpty()) {
                     continue;
@@ -332,10 +337,11 @@ public class CollectionModeFragment extends Fragment {
                     .comparing((DebtCustomerItem a) -> matchedDistance.getOrDefault(a.customerId, Float.MAX_VALUE))
                     .thenComparing(a -> -Math.abs(a.totalDebt)));
 
-            if (!isAdded()) {
+            Activity activity = getActivity();
+            if (activity == null || !isAdded()) {
                 return;
             }
-            requireActivity().runOnUiThread(() -> {
+            activity.runOnUiThread(() -> {
                 progressView.setVisibility(View.GONE);
                 nearbyItems.clear();
                 nearbyItems.addAll(withDistanceLabel(matched, matchedDistance));
@@ -413,12 +419,17 @@ public class CollectionModeFragment extends Fragment {
     }
 
     private double[] getVillageLatLon(String village, Location currentLocation) {
+        Context context = getContext();
+        if (context == null || !isAdded()) {
+            return null;
+        }
+        
         String cacheKey = village.toLowerCase(Locale.getDefault());
         if (geocodeCache.containsKey(cacheKey)) {
             return geocodeCache.get(cacheKey);
         }
 
-        Geocoder geocoder = new Geocoder(requireContext(), Locale.getDefault());
+        Geocoder geocoder = new Geocoder(context, Locale.getDefault());
         Set<String> queries = buildGeocodeQueries(village, currentLocation, geocoder);
 
         double radiusKm = Math.max(30.0, selectedRangeKm * 2.0);

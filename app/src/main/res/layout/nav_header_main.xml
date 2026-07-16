@@ -1,26 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="180dp"
-    android:background="@drawable/background_main_gradient"
+    android:layout_height="160dp"
+    android:background="@color/jewells_navy"
     android:gravity="bottom"
     android:orientation="vertical"
-    android:padding="20dp">
+    android:padding="24dp"
+    android:theme="@style/ThemeOverlay.AppCompat.Dark">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Bill Generator"
-        android:textColor="@android:color/white"
-        android:textSize="24sp"
+        android:textColor="@color/white"
+        android:textSize="22sp"
         android:textStyle="bold" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:text="Smart debt tracking and reminders"
-        android:textColor="#DCE6F3"
-        android:textSize="13sp" />
+        android:layout_marginTop="4dp"
+        android:text="Premium Jewelry Management"
+        android:textColor="#B0C4DE"
+        android:textSize="12sp" />
 
 </LinearLayout>

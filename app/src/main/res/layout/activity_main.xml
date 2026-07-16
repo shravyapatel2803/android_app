@@ -28,15 +28,60 @@
                 android:background="?attr/colorPrimary"
                 android:elevation="4dp"
                 app:title="@string/app_name"
-                app:titleTextColor="@color/white"
-                app:subtitleTextColor="#DCE6F3" />
+                app:titleTextColor="?attr/colorOnPrimary"
+                app:subtitleTextColor="?attr/colorOnPrimary" />
         </com.google.android.material.appbar.AppBarLayout>
 
         <androidx.viewpager2.widget.ViewPager2
             android:id="@+id/view_pager"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:visibility="gone"
             app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+
+        <LinearLayout
+            android:id="@+id/splash_screen"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/background_main_gradient"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:src="@drawable/ic_launcher_foreground"
+                app:tint="@color/jewells_gold_light" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Bill Generator"
+                android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
+                android:textColor="@color/white"
+                android:textStyle="bold" />
+
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/loading_progress"
+                android:layout_width="200dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:indeterminate="true"
+                app:indicatorColor="@color/jewells_gold"
+                app:trackColor="#20FFFFFF" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Optimizing database &amp; loading stock..."
+                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                android:textColor="#B0C4DE" />
+
+        </LinearLayout>
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
@@ -45,10 +90,13 @@
         android:layout_width="@dimen/app_drawer_width"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:background="@android:color/white"
+        android:background="@color/jewells_navy"
         app:headerLayout="@layout/nav_header_main"
-        app:itemIconTint="@color/nav_item_tint"
-        app:itemTextColor="@color/nav_item_tint"
+        app:itemIconTint="@color/nav_item_tint_light"
+        app:itemTextColor="@color/nav_item_tint_light"
+        app:itemShapeFillColor="@color/jewells_navy_light"
+        app:itemShapeInsetStart="12dp"
+        app:itemShapeInsetEnd="12dp"
         app:menu="@menu/main_drawer_menu" />
 
 </androidx.drawerlayout.widget.DrawerLayout>

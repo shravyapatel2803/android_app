@@ -27,13 +27,17 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ListAdapter;
+import android.widget.Filterable;
+import android.widget.Filter;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.view.MenuProvider;
+import androidx.lifecycle.Lifecycle;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -73,6 +77,9 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 public class GenerateBillFragment extends Fragment {
 
     private AutoCompleteTextView nameEditText, phoneEditText;
@@ -105,13 +112,19 @@ public class GenerateBillFragment extends Fragment {
     private final ArrayList<CustomerSuggestion> nameSuggestions = new ArrayList<>();
     private final ArrayList<CustomerSuggestion> phoneSuggestions = new ArrayList<>();
     
+    private final ExecutorService backgroundExecutor = Executors.newSingleThreadExecutor();
+    private static ArrayList<item_recycler_model_stocks> cachedStockItems = null;
+    private static final Object CACHE_LOCK = new Object();
+    private Dialog reusableAddItemDialog;
+    private generate_add_item_adapter addItemAdapter;
+    private ArrayList<item_recycler_model_stocks> dialogStockItems = new ArrayList<>();
+    
     private int editingBillId = -1;
     private int pendingEditBillId = -1;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
 
         GmsBarcodeScannerOptions options = new GmsBarcodeScannerOptions.Builder()
                 .setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS)
@@ -131,6 +144,27 @@ public class GenerateBillFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         Log.d(TAG, "onViewCreated called");
+
+        requireActivity().addMenuProvider(new MenuProvider() {
+            @Override
+            public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+                if (editingBillId != -1) {
+                    MenuItem cancelEdit = menu.add(0, 100, 0, "Cancel Edit");
+                    cancelEdit.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+                }
+            }
+
+            @Override
+            public boolean onMenuItemSelected(@NonNull MenuItem menuItem) {
+                if (menuItem.getItemId() == 100) {
+                    clearForm();
+                    requireActivity().invalidateOptionsMenu();
+                    Toast.makeText(getContext(), "Editing cancelled", Toast.LENGTH_SHORT).show();
+                    return true;
+                }
+                return false;
+            }
+        }, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
 
         dbHelper = new databaseSystem(requireContext());
 
@@ -188,6 +222,9 @@ public class GenerateBillFragment extends Fragment {
 
         generateBillButton.setOnClickListener(v -> validateAndShowFinalizeDialog());
         
+        // Pre-load stock items if not already cached
+        preloadStockItems();
+
         if (pendingEditBillId != -1) {
             int idToLoad = pendingEditBillId;
             pendingEditBillId = -1;
@@ -195,6 +232,30 @@ public class GenerateBillFragment extends Fragment {
         }
 
         Log.d(TAG, "View setup complete");
+    }
+
+    private void preloadStockItems() {
+        synchronized (CACHE_LOCK) {
+            if (cachedStockItems != null) return;
+        }
+        
+        backgroundExecutor.execute(() -> {
+            try {
+                List<Item> availableItemsList = dbHelper.fetchAllItems();
+                ArrayList<item_recycler_model_stocks> loadedItems = new ArrayList<>();
+                for(Item item : availableItemsList){
+                    loadedItems.add(new item_recycler_model_stocks(
+                            item.getId(), item.getName(), item.getWeight(), item.getType(), false
+                    ));
+                }
+                synchronized (CACHE_LOCK) {
+                    cachedStockItems = loadedItems;
+                }
+                Log.d(TAG, "Stock items pre-loaded into cache: " + loadedItems.size());
+            } catch (Exception e) {
+                Log.e(TAG, "Error pre-loading stock items", e);
+            }
+        });
     }
 
     private void setupReturnItemsRecyclerView() {
@@ -243,15 +304,31 @@ public class GenerateBillFragment extends Fragment {
             return;
         }
 
-        nameEditText.setOnItemClickListener((parent, view, position, id) -> {
-            if (position >= 0 && position < nameSuggestions.size()) {
-                applyCustomerSuggestion(nameSuggestions.get(position));
+        nameEditText.setOnItemClickListener((parent, view1, position, id) -> {
+            CustomerSuggestion suggestion = (CustomerSuggestion) parent.getItemAtPosition(position);
+            if (suggestion != null) {
+                applyCustomerSuggestion(suggestion);
+                // Explicitly fix the text to ensure no phone number is appended
+                nameEditText.post(() -> {
+                    applyingSuggestion = true;
+                    nameEditText.setText(suggestion.name, false);
+                    nameEditText.setSelection(suggestion.name.length());
+                    applyingSuggestion = false;
+                });
             }
         });
 
-        phoneEditText.setOnItemClickListener((parent, view, position, id) -> {
-            if (position >= 0 && position < phoneSuggestions.size()) {
-                applyCustomerSuggestion(phoneSuggestions.get(position));
+        phoneEditText.setOnItemClickListener((parent, view1, position, id) -> {
+            CustomerSuggestion suggestion = (CustomerSuggestion) parent.getItemAtPosition(position);
+            if (suggestion != null) {
+                applyCustomerSuggestion(suggestion);
+                // Explicitly fix the text
+                phoneEditText.post(() -> {
+                    applyingSuggestion = true;
+                    phoneEditText.setText(suggestion.phone, false);
+                    phoneEditText.setSelection(suggestion.phone.length());
+                    applyingSuggestion = false;
+                });
             }
         });
 
@@ -317,14 +394,11 @@ public class GenerateBillFragment extends Fragment {
         Cursor cursor = null;
         try {
             cursor = dbHelper.searchCustomersByName(queryText, 8);
-            ArrayList<String> displayItems = new ArrayList<>();
             while (cursor != null && cursor.moveToNext()) {
-                CustomerSuggestion suggestion = readSuggestionFromCursor(cursor);
-                nameSuggestions.add(suggestion);
-                displayItems.add(suggestion.name + " • " + suggestion.phone);
+                nameSuggestions.add(readSuggestionFromCursor(cursor));
             }
-            if (!displayItems.isEmpty()) {
-                ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_dropdown_item_1line, displayItems);
+            if (!nameSuggestions.isEmpty()) {
+                MultiCustomerAdapter adapter = new MultiCustomerAdapter(requireContext(), new ArrayList<>(nameSuggestions), true);
                 nameEditText.setAdapter(adapter);
                 nameEditText.showDropDown();
             }
@@ -346,14 +420,11 @@ public class GenerateBillFragment extends Fragment {
         Cursor cursor = null;
         try {
             cursor = dbHelper.searchCustomersByPhone(queryText, 8);
-            ArrayList<String> displayItems = new ArrayList<>();
             while (cursor != null && cursor.moveToNext()) {
-                CustomerSuggestion suggestion = readSuggestionFromCursor(cursor);
-                phoneSuggestions.add(suggestion);
-                displayItems.add(suggestion.phone + " • " + suggestion.name);
+                phoneSuggestions.add(readSuggestionFromCursor(cursor));
             }
-            if (!displayItems.isEmpty()) {
-                ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_dropdown_item_1line, displayItems);
+            if (!phoneSuggestions.isEmpty()) {
+                MultiCustomerAdapter adapter = new MultiCustomerAdapter(requireContext(), new ArrayList<>(phoneSuggestions), false);
                 phoneEditText.setAdapter(adapter);
                 phoneEditText.showDropDown();
             }
@@ -363,6 +434,58 @@ public class GenerateBillFragment extends Fragment {
             if (cursor != null) {
                 cursor.close();
             }
+        }
+    }
+
+    private static class MultiCustomerAdapter extends ArrayAdapter<CustomerSuggestion> implements Filterable {
+        private final ArrayList<CustomerSuggestion> customers;
+        private final boolean isNameQuery;
+
+        public MultiCustomerAdapter(android.content.Context context, ArrayList<CustomerSuggestion> customers, boolean isNameQuery) {
+            super(context, android.R.layout.simple_dropdown_item_1line, customers);
+            this.customers = customers;
+            this.isNameQuery = isNameQuery;
+        }
+
+        @NonNull
+        @Override
+        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+            if (convertView == null) {
+                convertView = LayoutInflater.from(getContext()).inflate(android.R.layout.simple_dropdown_item_1line, parent, false);
+            }
+            TextView textView = (TextView) convertView.findViewById(android.R.id.text1);
+            CustomerSuggestion suggestion = getItem(position);
+            if (suggestion != null) {
+                textView.setText(isNameQuery ? suggestion.name + " • " + suggestion.phone : suggestion.phone + " • " + suggestion.name);
+            }
+            return convertView;
+        }
+
+        @NonNull
+        @Override
+        public Filter getFilter() {
+            return new Filter() {
+                @Override
+                protected FilterResults performFiltering(CharSequence constraint) {
+                    FilterResults results = new FilterResults();
+                    results.values = customers;
+                    results.count = customers.size();
+                    return results;
+                }
+
+                @Override
+                protected void publishResults(CharSequence constraint, FilterResults results) {
+                    notifyDataSetChanged();
+                }
+
+                @Override
+                public CharSequence convertResultToString(Object resultValue) {
+                    if (resultValue instanceof CustomerSuggestion) {
+                        return isNameQuery ? ((CustomerSuggestion) resultValue).name : ((CustomerSuggestion) resultValue).phone;
+                    }
+                    return super.convertResultToString(resultValue);
+                }
+            };
         }
     }
 
@@ -403,14 +526,15 @@ public class GenerateBillFragment extends Fragment {
                         cursor.getDouble(cursor.getColumnIndexOrThrow("debt"))
                 );
                 Chip chip = new Chip(requireContext());
-                chip.setText(suggestion.name);
+                // Display both name and phone in the chip for clarity
+                chip.setText(suggestion.name + " • " + suggestion.phone);
                 chip.setClickable(true);
                 chip.setCheckable(false);
                 chip.setChipMinHeight(44f);
-                chip.setTextSize(14f);
+                chip.setTextSize(12f);
                 chip.setEnsureMinTouchTargetSize(true);
-                chip.setChipStartPadding(14f);
-                chip.setChipEndPadding(14f);
+                chip.setChipStartPadding(12f);
+                chip.setChipEndPadding(12f);
                 chip.setChipBackgroundColorResource(com.google.android.material.R.color.m3_chip_background_color);
                 LinearLayout.LayoutParams chipParams = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -483,17 +607,17 @@ public class GenerateBillFragment extends Fragment {
         }
         if (!existingCustomer) {
             customerLookupHint.setText("New customer. Details will be saved on bill generation.");
-            customerLookupHint.setTextColor(Color.parseColor("#616161"));
+            customerLookupHint.setTextColor(Color.WHITE);
             customerLookupHint.setVisibility(View.VISIBLE);
             return;
         }
 
         if (debtAmount > 0.001) {
             customerLookupHint.setText(String.format(Locale.getDefault(), "Existing customer found. Outstanding debt: %s", currencyFormat.format(debtAmount)));
-            customerLookupHint.setTextColor(Color.parseColor("#D32F2F"));
+            customerLookupHint.setTextColor(Color.WHITE);
         } else {
             customerLookupHint.setText("Existing customer found. No outstanding debt.");
-            customerLookupHint.setTextColor(Color.parseColor("#2E7D32"));
+            customerLookupHint.setTextColor(Color.WHITE);
         }
         customerLookupHint.setVisibility(View.VISIBLE);
     }
@@ -558,74 +682,76 @@ public class GenerateBillFragment extends Fragment {
     }
 
     private void showAddItemDialog() {
-        Log.d(TAG, "Showing Add Item dialog");
-        final Dialog dialog = new Dialog(requireContext());
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dialog.setContentView(R.layout.add_new_item);
-        UiAnimationHelper.applyDialogAnimations(dialog);
-        dialog.setTitle("Select Item to Add");
+        if (reusableAddItemDialog == null) {
+            reusableAddItemDialog = new Dialog(requireContext());
+            reusableAddItemDialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+            reusableAddItemDialog.setContentView(R.layout.add_new_item);
+            UiAnimationHelper.applyDialogAnimations(reusableAddItemDialog);
+            
+            Window window = reusableAddItemDialog.getWindow();
+            if (window != null) {
+                window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            }
 
-        Window window = dialog.getWindow();
-        if (window != null) { window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT); }
+            RecyclerView itemsRecyclerView = reusableAddItemDialog.findViewById(R.id.add_item_recycler_view);
+            EditText searchEditText = reusableAddItemDialog.findViewById(R.id.item_search_editText);
+            View closeButton = reusableAddItemDialog.findViewById(R.id.add_item_dialog_close_button);
 
-        RecyclerView itemsRecyclerView = dialog.findViewById(R.id.add_item_recycler_view);
-        EditText searchEditText = dialog.findViewById(R.id.item_search_editText);
-        View closeButton = dialog.findViewById(R.id.add_item_dialog_close_button);
+            if (closeButton != null) {
+                closeButton.setOnClickListener(v -> reusableAddItemDialog.dismiss());
+            }
 
-        if (closeButton != null) {
-            closeButton.setOnClickListener(v -> dialog.dismiss());
-        }
-
-        if (itemsRecyclerView == null) {
-            Log.e(TAG, "RecyclerView R.id.add_item_recycler_view not found in add_new_item.xml");
-            Toast.makeText(getContext(), "Error: Dialog layout invalid.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        itemsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-
-        List<Item> availableItemsList = dbHelper.fetchAllItems();
-
-        ArrayList<item_recycler_model_stocks> availableStockItems = new ArrayList<>();
-        for(Item item : availableItemsList){
-            availableStockItems.add(new item_recycler_model_stocks(
-                    item.getId(), item.getName(), item.getWeight(), item.getType(), false
-            ));
-        }
-
-        if (availableStockItems.isEmpty()){
-            Log.d(TAG, "No available items in stock to add.");
-            Toast.makeText(getContext(), "No available items in stock.", Toast.LENGTH_SHORT).show();
-            TextView titleOrMsgView = dialog.findViewById(R.id.name_editText);
-            if(titleOrMsgView != null) titleOrMsgView.setText("No Stock Available");
-            if(searchEditText != null) searchEditText.setVisibility(View.GONE);
-        } else {
-            Log.d(TAG, "Found " + availableStockItems.size() + " available items.");
-        }
-
-        generate_add_item_adapter addItemAdapter = new generate_add_item_adapter(
-                requireContext(),
-                this,
-                availableStockItems,
-                selectedItemsList,
-                dialog
-        );
-        itemsRecyclerView.setAdapter(addItemAdapter);
-
-        if (searchEditText != null) {
-            Log.d(TAG, "Setting up search listener for AddItemDialog");
-            searchEditText.addTextChangedListener(new TextWatcher() {
-                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    addItemAdapter.filter(s.toString());
+            itemsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+            
+            // Initialize with cached items if available
+            synchronized (CACHE_LOCK) {
+                if (cachedStockItems != null) {
+                    dialogStockItems.clear();
+                    dialogStockItems.addAll(cachedStockItems);
                 }
-                @Override public void afterTextChanged(Editable s) {}
-            });
-        } else {
-            Log.w(TAG, "Search EditText R.id.item_search_editText not found in add_new_item.xml");
+            }
+
+            addItemAdapter = new generate_add_item_adapter(
+                    requireContext(),
+                    this,
+                    dialogStockItems,
+                    selectedItemsList,
+                    reusableAddItemDialog
+            );
+            itemsRecyclerView.setAdapter(addItemAdapter);
+
+            if (searchEditText != null) {
+                searchEditText.addTextChangedListener(new TextWatcher() {
+                    @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                    @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                        addItemAdapter.filter(s.toString());
+                    }
+                    @Override public void afterTextChanged(Editable s) {}
+                });
+            }
         }
 
-        dialog.show();
+        // Show dialog immediately
+        reusableAddItemDialog.show();
+
+        // Refresh data silently in background
+        backgroundExecutor.execute(() -> {
+            List<Item> items = dbHelper.fetchAllItems();
+            ArrayList<item_recycler_model_stocks> loaded = new ArrayList<>();
+            for (Item item : items) {
+                loaded.add(new item_recycler_model_stocks(item.getId(), item.getName(), item.getWeight(), item.getType(), false));
+            }
+            
+            synchronized (CACHE_LOCK) {
+                cachedStockItems = loaded;
+            }
+
+            mainHandler.post(() -> {
+                if (reusableAddItemDialog.isShowing()) {
+                    addItemAdapter.updateData(loaded);
+                }
+            });
+        });
     }
 
     private void validateAndShowFinalizeDialog() {
@@ -733,14 +859,6 @@ public class GenerateBillFragment extends Fragment {
         }
         double finalTotal = originalManualTotal - deduction;
 
-        // Show QR if UPI ID exists
-        if (!upiId.isEmpty() && upiQrContainer != null && upiQrImage != null) {
-            upiQrContainer.setVisibility(View.VISIBLE);
-            android.graphics.Bitmap qr = QrCodeGenerator.generateUpiQrCode(upiId, shopName, String.valueOf(finalTotal), "Jewelry Purchase");
-            if (qr != null) upiQrImage.setImageBitmap(qr);
-        }
-
-
         totalTextView.setText(String.format("Original Total: %s", currencyFormat.format(finalTotal)));
 
         // Setup Indian currency formatting for amount paid in dialog
@@ -753,17 +871,17 @@ public class GenerateBillFragment extends Fragment {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override public void afterTextChanged(Editable s) {
-                updateDialogDisplay(s.toString(), finalTotal, updateTotalSwitch.isChecked(), debtTextView, dueDateContainer, finalTotalTextView);
+                updateDialogDisplay(s.toString(), finalTotal, updateTotalSwitch.isChecked(), debtTextView, dueDateContainer, finalTotalTextView, upiId, shopName, upiQrContainer, upiQrImage);
             }
         };
         amountPaidEditText.addTextChangedListener(amountWatcher);
 
         updateTotalSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             Log.d(TAG, "Update Total Switch toggled: " + isChecked);
-            updateDialogDisplay(amountPaidEditText.getText().toString(), finalTotal, isChecked, debtTextView, dueDateContainer, finalTotalTextView);
+            updateDialogDisplay(amountPaidEditText.getText().toString(), finalTotal, isChecked, debtTextView, dueDateContainer, finalTotalTextView, upiId, shopName, upiQrContainer, upiQrImage);
         });
 
-        updateDialogDisplay("", finalTotal, false, debtTextView, dueDateContainer, finalTotalTextView);
+        updateDialogDisplay("", finalTotal, false, debtTextView, dueDateContainer, finalTotalTextView, upiId, shopName, upiQrContainer, upiQrImage);
 
 
         cancelButton.setOnClickListener(v -> {
@@ -850,10 +968,16 @@ public class GenerateBillFragment extends Fragment {
     }
 
     private void updateDialogDisplay(String amountPaidStr, double originalTotal, boolean updateTotal,
-                                     TextView debtTextView, LinearLayout dueDateContainer, TextView finalTotalTextView) {
+                                     TextView debtTextView, LinearLayout dueDateContainer, TextView finalTotalTextView,
+                                     String upiId, String shopName, View upiQrContainer, android.widget.ImageView upiQrImage) {
+        double qrAmount = originalTotal;
         try {
             String input = amountPaidStr.trim().replace(",", "");
             double amountPaid = input.isEmpty() ? 0.0 : Double.parseDouble(input);
+
+            if (amountPaid > 0) {
+                qrAmount = amountPaid;
+            }
 
             if (updateTotal) {
                 debtTextView.setVisibility(View.GONE);
@@ -883,6 +1007,22 @@ public class GenerateBillFragment extends Fragment {
             debtTextView.setVisibility(View.GONE);
             dueDateContainer.setVisibility(View.GONE);
             finalTotalTextView.setVisibility(View.GONE);
+        }
+
+        // Show/Update QR if UPI ID exists
+        if (upiId != null && !upiId.isEmpty() && upiQrContainer != null && upiQrImage != null) {
+            upiQrContainer.setVisibility(View.VISIBLE);
+            String qrAmountStr = String.format(Locale.US, "%.2f", qrAmount);
+            String lastQrAmount = (String) upiQrImage.getTag();
+            if (lastQrAmount == null || !lastQrAmount.equals(qrAmountStr)) {
+                android.graphics.Bitmap qr = QrCodeGenerator.generateUpiQrCode(upiId, shopName, qrAmountStr, "Jewelry Purchase");
+                if (qr != null) {
+                    upiQrImage.setImageBitmap(qr);
+                    upiQrImage.setTag(qrAmountStr);
+                }
+            }
+        } else if (upiQrContainer != null) {
+            upiQrContainer.setVisibility(View.GONE);
         }
     }
 
@@ -988,18 +1128,9 @@ public class GenerateBillFragment extends Fragment {
             }
         }
 
-        String returnItemType = null;
-        double returnItemWeight = 0;
-        double returnItemDeductAmount = 0;
         List<ReturnItem> finalReturnItems = new ArrayList<>();
         if (returnItemSwitch.isChecked()) {
             finalReturnItems.addAll(returnItemsList);
-            if (!returnItemsList.isEmpty()) {
-                ReturnItem first = returnItemsList.get(0);
-                returnItemType = first.getType();
-                returnItemWeight = first.getWeight();
-                returnItemDeductAmount = first.getDeductAmount();
-            }
         }
 
         double billDebtAmount = Math.max(0.0, billedAmount - paidAmount);
@@ -1186,6 +1317,7 @@ public class GenerateBillFragment extends Fragment {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        backgroundExecutor.shutdownNow();
     }
 
     @Override
@@ -1195,25 +1327,7 @@ public class GenerateBillFragment extends Fragment {
         if (getActivity() != null) getActivity().invalidateOptionsMenu();
     }
 
-    @Override
-    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
-        if (editingBillId != -1) {
-            MenuItem cancelEdit = menu.add(0, 100, 0, "Cancel Edit");
-            cancelEdit.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
-        }
-        super.onCreateOptionsMenu(menu, inflater);
-    }
 
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == 100) {
-            clearForm();
-            if (getActivity() != null) getActivity().invalidateOptionsMenu();
-            Toast.makeText(getContext(), "Editing cancelled", Toast.LENGTH_SHORT).show();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
 
     public void loadBillForEditing(int billId) {
         if (nameEditText == null) {

@@ -8,208 +8,214 @@
     app:cardElevation="0dp"
     app:strokeWidth="0dp">
 
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <!-- Header -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/jewells_navy"
-            android:orientation="vertical"
-            android:padding="24dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Finalize Transaction"
-                android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-                android:textColor="@color/white"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/dialog_bill_total_textview"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
-                android:textColor="@color/jewells_gold_light"
-                android:textStyle="bold"
-                tools:text="Total: ₹20,000.00" />
-        </LinearLayout>
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="24dp">
+            android:orientation="vertical">
 
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            <!-- Header -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Amount Received (₹)"
-                app:startIconDrawable="@drawable/ic_receipt"
-                app:startIconTint="?attr/colorPrimary">
+                android:background="@color/jewells_navy"
+                android:orientation="vertical"
+                android:padding="24dp">
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/dialog_amount_paid_editText"
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Finalize Transaction"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                    android:textColor="@color/white"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/dialog_bill_total_textview"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
+                    android:textColor="@color/jewells_gold_light"
+                    android:textStyle="bold"
+                    tools:text="Total: ₹10,000.00" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="24dp">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberDecimal"
-                    android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:hint="Amount Received (₹)"
+                    app:startIconDrawable="@drawable/ic_receipt"
+                    app:startIconTint="?attr/colorPrimary">
 
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardBackgroundColor="?attr/colorSurfaceVariant"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/dialog_amount_paid_editText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    app:cardBackgroundColor="?attr/colorSurfaceVariant"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Update Bill Total to Amount Received?"
+                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+
+                        <com.google.android.material.switchmaterial.SwitchMaterial
+                            android:id="@+id/dialog_update_total_switch"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="false" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView
+                    android:id="@+id/dialog_debt_textview"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/pdf_section_border"
+                    android:padding="12dp"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                    android:textColor="?attr/colorError"
+                    android:visibility="gone"
+                    tools:text="Remaining Debt: ₹10,000.00 will be added."
+                    tools:visibility="visible" />
 
                 <LinearLayout
+                    android:id="@+id/dialog_due_date_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/pdf_header_strip_bg"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:padding="12dp">
+                    android:padding="8dp"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_marginEnd="8dp"
+                        android:src="@drawable/ic_receipt"
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                     <TextView
+                        android:id="@+id/dialog_due_date_text"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Update Bill Total to Amount Received?"
-                        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        android:text="Due date: Not selected"
+                        android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
 
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/dialog_update_total_switch"
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/dialog_pick_due_date_button"
+                        style="@style/Widget.Material3.Button.TextButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:checked="false" />
+                        android:text="Pick Date"
+                        android:textColor="?attr/colorPrimary" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <TextView
-                android:id="@+id/dialog_debt_textview"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/pdf_section_border"
-                android:padding="12dp"
-                android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
-                android:textColor="?attr/colorError"
-                android:visibility="gone"
-                tools:text="Remaining Debt: ₹500 will be added."
-                tools:visibility="visible" />
-
-            <LinearLayout
-                android:id="@+id/dialog_due_date_container"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/pdf_header_strip_bg"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="8dp"
-                android:visibility="gone"
-                tools:visibility="visible">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_marginEnd="8dp"
-                    android:src="@drawable/ic_receipt"
-                    app:tint="?attr/colorOnSurfaceVariant" />
 
                 <TextView
-                    android:id="@+id/dialog_due_date_text"
-                    android:layout_width="0dp"
+                    android:id="@+id/dialog_final_total_textview"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Due date: Not selected"
-                    android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
+                    android:layout_marginTop="16dp"
+                    android:gravity="center"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="?attr/colorSecondary"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:text="Final Total will be: ₹10,000"
+                    tools:visibility="visible" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/dialog_pick_due_date_button"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
+                <!-- UPI QR Container -->
+                <LinearLayout
+                    android:id="@+id/upi_qr_container"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Pick Date"
-                    android:textColor="?attr/colorPrimary" />
-            </LinearLayout>
+                    android:layout_marginTop="16dp"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    tools:visibility="visible">
 
-            <TextView
-                android:id="@+id/dialog_final_total_textview"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:gravity="center"
-                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                android:textColor="?attr/colorSecondary"
-                android:textStyle="bold"
-                android:visibility="gone"
-                tools:text="Final Total will be: ₹19,500"
-                tools:visibility="visible" />
+                    <ImageView
+                        android:id="@+id/upi_qr_image"
+                        android:layout_width="150dp"
+                        android:layout_height="150dp"
+                        android:scaleType="fitCenter"
+                        tools:src="@drawable/ic_receipt" />
 
-            <!-- UPI QR Container -->
-            <LinearLayout
-                android:id="@+id/upi_qr_container"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:visibility="gone"
-                tools:visibility="visible">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Scan to Pay via UPI"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
 
-                <ImageView
-                    android:id="@+id/upi_qr_image"
-                    android:layout_width="180dp"
-                    android:layout_height="180dp"
-                    android:scaleType="fitCenter"
-                    tools:src="@drawable/ic_receipt" />
-
-                <TextView
-                    android:layout_width="wrap_content"
+                <!-- Actions -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="Scan to Pay via UPI"
-                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
-            </LinearLayout>
+                    android:layout_marginTop="24dp"
+                    android:orientation="horizontal">
 
-            <!-- Actions -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:orientation="horizontal">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/dialog_cancel_button"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="0dp"
+                        android:layout_height="56dp"
+                        android:layout_weight="1"
+                        android:text="Cancel" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/dialog_cancel_button"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="0dp"
-                    android:layout_height="56dp"
-                    android:layout_weight="1"
-                    android:text="Cancel" />
+                    <Space
+                        android:layout_width="16dp"
+                        android:layout_height="0dp" />
 
-                <Space
-                    android:layout_width="16dp"
-                    android:layout_height="0dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/dialog_save_button"
-                    android:layout_width="0dp"
-                    android:layout_height="56dp"
-                    android:layout_weight="1.5"
-                    android:text="Confirm &amp; Save"
-                    app:cornerRadius="16dp" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/dialog_save_button"
+                        android:layout_width="0dp"
+                        android:layout_height="56dp"
+                        android:layout_weight="1.5"
+                        android:text="Confirm &amp; Save"
+                        app:cornerRadius="16dp" />
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 </com.google.android.material.card.MaterialCardView>

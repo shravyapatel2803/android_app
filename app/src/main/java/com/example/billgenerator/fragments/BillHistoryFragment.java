@@ -22,6 +22,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.view.MenuProvider;
+import androidx.lifecycle.Lifecycle;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SearchView;
 import androidx.fragment.app.Fragment;
@@ -68,7 +70,6 @@ public class BillHistoryFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
         Log.d(TAG, "onCreate called");
     }
 
@@ -76,13 +77,51 @@ public class BillHistoryFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         Log.d(TAG, "onCreateView called");
-        return inflater.inflate(R.layout.activity_bill_history, container, false);
+        return inflater.inflate(R.layout.fragment_bill_history, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         Log.d(TAG, "onViewCreated called");
+
+        requireActivity().addMenuProvider(new MenuProvider() {
+            @Override
+            public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+                menuInflater.inflate(R.menu.bill_history_menu, menu);
+                MenuItem searchItem = menu.findItem(R.id.action_search);
+                SearchView searchView = (SearchView) searchItem.getActionView();
+                if (searchView != null) {
+                    searchView.setQueryHint("Search by name or bill ID...");
+                    searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+                        @Override public boolean onQueryTextSubmit(String query) {
+                            searchQuery = query == null ? "" : query;
+                            applyFilters();
+                            return false;
+                        }
+                        @Override public boolean onQueryTextChange(String newText) {
+                            searchQuery = newText == null ? "" : newText;
+                            applyFilters();
+                            return true;
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public boolean onMenuItemSelected(@NonNull MenuItem menuItem) {
+                int itemId = menuItem.getItemId();
+                if (itemId == R.id.action_generate_simple_pdf) {
+                    generateSimpleBillsPdf();
+                    return true;
+                } else if (itemId == R.id.action_generate_detailed_pdf) {
+                    generateDetailedBillsPdf();
+                    return true;
+                }
+                return false;
+            }
+        }, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
+
         dbHelper = new databaseSystem(getContext());
         recyclerView = view.findViewById(R.id.bill_history_recyclerView);
         billHistoryEmpty = view.findViewById(R.id.bill_history_empty);
@@ -129,7 +168,15 @@ public class BillHistoryFragment extends Fragment {
     private void setupRecyclerView() {
         Log.d(TAG, "Setting up RecyclerView");
         adapter = new BillHistoryAdapter(requireContext(), filteredList); // Adapter uses filtered list
-        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        
+        // Dynamic column count for tablets
+        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        if (isTablet) {
+            recyclerView.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(getContext(), 2));
+        } else {
+            recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        }
+
         recyclerView.setAdapter(adapter);
         UiAnimationHelper.setupRecyclerViewAnimations(recyclerView);
     }
@@ -219,45 +266,7 @@ public class BillHistoryFragment extends Fragment {
         return (value == null || value.trim().isEmpty()) ? "N/A" : value.trim();
     }
 
-    // Sets up menu with Search and PDF options
-    @Override
-    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
-        inflater.inflate(R.menu.bill_history_menu, menu);
-        MenuItem searchItem = menu.findItem(R.id.action_search);
-        SearchView searchView = (SearchView) searchItem.getActionView();
-        if (searchView != null) {
-            searchView.setQueryHint("Search by name or bill ID...");
-            searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-                @Override public boolean onQueryTextSubmit(String query) {
-                    searchQuery = query == null ? "" : query;
-                    applyFilters();
-                    return false;
-                }
-                @Override public boolean onQueryTextChange(String newText) {
-                    searchQuery = newText == null ? "" : newText;
-                    applyFilters();
-                    return true;
-                }
-            });
-        }
-        super.onCreateOptionsMenu(menu, inflater);
-        Log.d(TAG, "onCreateOptionsMenu finished.");
-    }
 
-    // Handles clicks on menu items (PDF generation)
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        Log.d(TAG, "onOptionsItemSelected: " + item.getTitle());
-        int itemId = item.getItemId();
-        if (itemId == R.id.action_generate_simple_pdf) {
-            generateSimpleBillsPdf(); // Generate summary PDF
-            return true;
-        } else if (itemId == R.id.action_generate_detailed_pdf) {
-            generateDetailedBillsPdf(); // Generate detailed PDF
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
 
     // Filters the displayed list based on search text
     private void applyFilters() {

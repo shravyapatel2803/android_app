@@ -20,6 +20,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.view.MenuProvider;
+import androidx.lifecycle.Lifecycle;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
@@ -29,6 +31,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.billgenerator.R;
 import com.example.billgenerator.adapters.NotificationHistoryAdapter;
 import com.example.billgenerator.database.databaseSystem;
+import com.example.billgenerator.databinding.FragmentNotificationHistoryBinding;
 import com.example.billgenerator.models.NotificationHistoryItem;
 import com.example.billgenerator.ui.UiAnimationHelper;
 
@@ -54,7 +57,6 @@ public class NotificationHistoryFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
     }
 
     @Nullable
@@ -66,6 +68,36 @@ public class NotificationHistoryFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        requireActivity().addMenuProvider(new MenuProvider() {
+            @Override
+            public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+                menu.add(0, 1, 0, "Auto-clear Settings").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+                menu.add(0, 2, 1, "Clear All History").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+            }
+
+            @Override
+            public boolean onMenuItemSelected(@NonNull MenuItem menuItem) {
+                if (menuItem.getItemId() == 1) {
+                    showAutoClearDialog();
+                    return true;
+                } else if (menuItem.getItemId() == 2) {
+                    new AlertDialog.Builder(requireContext())
+                            .setTitle("Clear History")
+                            .setMessage("Are you sure you want to delete all notification history?")
+                            .setPositiveButton("Clear All", (dialog, which) -> {
+                                dbHelper.clearAllNotifications();
+                                loadData();
+                                Toast.makeText(requireContext(), "History cleared", Toast.LENGTH_SHORT).show();
+                            })
+                            .setNegativeButton("Cancel", null)
+                            .show();
+                    return true;
+                }
+                return false;
+            }
+        }, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
+
         dbHelper = new databaseSystem(requireContext());
 
         recyclerView = view.findViewById(R.id.notification_history_recycler);
@@ -238,32 +270,7 @@ public class NotificationHistoryFragment extends Fragment {
         return dateStr;
     }
 
-    @Override
-    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
-        menu.add(0, 1, 0, "Auto-clear Settings").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
-        menu.add(0, 2, 1, "Clear All History").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
-    }
 
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == 1) {
-            showAutoClearDialog();
-            return true;
-        } else if (item.getItemId() == 2) {
-            new AlertDialog.Builder(requireContext())
-                    .setTitle("Clear History")
-                    .setMessage("Are you sure you want to delete all notification history?")
-                    .setPositiveButton("Clear All", (dialog, which) -> {
-                        dbHelper.clearAllNotifications();
-                        loadData();
-                        Toast.makeText(requireContext(), "History cleared", Toast.LENGTH_SHORT).show();
-                    })
-                    .setNegativeButton("Cancel", null)
-                    .show();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
 
     private void showAutoClearDialog() {
         String[] options = {"24 Hours", "7 Days", "15 Days", "90 Days", "Never (Keep Always)"};

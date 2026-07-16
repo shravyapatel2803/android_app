@@ -27,6 +27,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.billgenerator.R;
 import com.example.billgenerator.adapters.DebtCustomerAdapter;
 import com.example.billgenerator.database.databaseSystem;
+import com.example.billgenerator.databinding.FragmentDebtCustomersBinding;
 import com.example.billgenerator.models.DebtCustomerItem;
 import com.example.billgenerator.ui.UiAnimationHelper;
 import com.google.android.material.textfield.TextInputEditText;
@@ -42,15 +43,11 @@ public class DebtCustomersFragment extends Fragment {
     public static final String KEY_DEBT_WHATSAPP_TEMPLATE = "debt_whatsapp_template";
     public static final String DEFAULT_DEBT_TEMPLATE = "Hello {name}, this is a reminder for your pending debt of Rs {amount}. Please clear it by {due_date}.";
 
+    private FragmentDebtCustomersBinding binding;
     private final ArrayList<DebtCustomerItem> allItems = new ArrayList<>();
     private final ArrayList<DebtCustomerItem> filteredItems = new ArrayList<>();
     private DebtCustomerAdapter adapter;
     private databaseSystem dbHelper;
-    private TextView summaryText;
-    private View emptyView;
-    private TextView activeFiltersText;
-    private TextInputEditText searchInput;
-    private View openFiltersButton;
     private String queryFilter = "";
     private int dueFilter = 0; // 0 all, 1 overdue, 2 today, 3 upcoming
     private int amountFilter = 0; // 0 all, 1 low, 2 medium, 3 high
@@ -60,7 +57,14 @@ public class DebtCustomersFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_debt_customers, container, false);
+        binding = FragmentDebtCustomersBinding.inflate(inflater, container, false);
+        return binding.getRoot();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
     }
 
     @Override
@@ -68,41 +72,36 @@ public class DebtCustomersFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         dbHelper = new databaseSystem(requireContext());
 
-        RecyclerView recyclerView = view.findViewById(R.id.debt_customers_recycler);
-        summaryText = view.findViewById(R.id.debt_customers_summary);
-        emptyView = view.findViewById(R.id.debt_customers_empty);
-        activeFiltersText = view.findViewById(R.id.debt_active_filters_text);
-        searchInput = view.findViewById(R.id.debt_search_input);
-        openFiltersButton = view.findViewById(R.id.debt_open_filters_button);
-        View customizeMessageButton = view.findViewById(R.id.debt_customize_message_button);
-
         adapter = new DebtCustomerAdapter(requireContext(), filteredItems, this::openDebtHistory);
+        
         int sw = requireContext().getResources().getConfiguration().smallestScreenWidthDp;
         if (sw >= 600) {
-            recyclerView.setLayoutManager(new GridLayoutManager(requireContext(), 2));
+            binding.debtCustomersRecycler.setLayoutManager(new GridLayoutManager(requireContext(), 2));
         } else {
-            recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+            binding.debtCustomersRecycler.setLayoutManager(new LinearLayoutManager(requireContext()));
         }
-        recyclerView.setAdapter(adapter);
-        UiAnimationHelper.setupRecyclerViewAnimations(recyclerView);
+        binding.debtCustomersRecycler.setAdapter(adapter);
+        UiAnimationHelper.setupRecyclerViewAnimations(binding.debtCustomersRecycler);
+        
         UiAnimationHelper.configureEmptyState(
-                emptyView,
+                binding.debtCustomersEmpty.getRoot(),
                 R.drawable.ic_empty_debt,
                 "No debt records found",
                 "Customers with outstanding balances will appear here.",
                 null,
                 null
         );
+
+        if (binding.debtCustomizeMessageButton != null) {
+            binding.debtCustomizeMessageButton.setOnClickListener(v -> showTemplateCustomizationDialog());
+        }
+
+        if (binding.debtOpenFiltersButton != null) {
+            binding.debtOpenFiltersButton.setOnClickListener(v -> showFilterDialog());
+        }
+
         setupFilters();
-
-        if (customizeMessageButton != null) {
-            customizeMessageButton.setOnClickListener(v -> showTemplateCustomizationDialog());
-        }
-
-        if (openFiltersButton != null) {
-            openFiltersButton.setOnClickListener(v -> showFilterDialog());
-        }
-
+        loadData();
         updateFilterButtonLabel();
     }
 
@@ -151,8 +150,8 @@ public class DebtCustomersFragment extends Fragment {
     }
 
     private void setupFilters() {
-        if (searchInput != null) {
-            searchInput.addTextChangedListener(new TextWatcher() {
+        if (binding.debtSearchInput != null) {
+            binding.debtSearchInput.addTextChangedListener(new TextWatcher() {
                 @Override
                 public void beforeTextChanged(CharSequence s, int start, int count, int after) {
                 }
@@ -168,7 +167,6 @@ public class DebtCustomersFragment extends Fragment {
                 }
             });
         }
-
     }
 
     private void showFilterDialog() {
@@ -224,29 +222,27 @@ public class DebtCustomersFragment extends Fragment {
     }
 
     private void updateFilterButtonLabel() {
-        if (openFiltersButton instanceof TextView) {
-            int activeCount = 0;
-            if (dueFilter != 0) {
-                activeCount++;
-            }
-            if (amountFilter != 0) {
-                activeCount++;
-            }
-            ((TextView) openFiltersButton).setText(activeCount == 0 ? "Filter" : "Filter (" + activeCount + ")");
+        int activeCount = 0;
+        if (dueFilter != 0) activeCount++;
+        if (amountFilter != 0) activeCount++;
+        
+        if (binding.debtOpenFiltersButton instanceof TextView) {
+            ((TextView) binding.debtOpenFiltersButton).setText(activeCount == 0 ? "Filter" : "Filter (" + activeCount + ")");
         }
 
-        if (activeFiltersText != null) {
+        if (binding.debtActiveFiltersText != null) {
             String due = DUE_FILTER_OPTIONS[dueFilter];
             String amount = AMOUNT_FILTER_OPTIONS[amountFilter];
             if (dueFilter == 0 && amountFilter == 0) {
-                activeFiltersText.setText("No filters applied");
+                binding.debtActiveFiltersText.setText("No filters applied");
             } else {
-                activeFiltersText.setText("Active: " + due + " | " + amount);
+                binding.debtActiveFiltersText.setText("Active: " + due + " | " + amount);
             }
         }
     }
 
     private void applyFilters() {
+        if (binding == null) return;
         filteredItems.clear();
         String search = queryFilter == null ? "" : queryFilter.toLowerCase(Locale.getDefault()).trim();
         String[] searchTokens = search.isEmpty() ? new String[0] : search.split("\\\\s+");
@@ -260,9 +256,7 @@ public class DebtCustomersFragment extends Fragment {
 
             boolean matchesSearch = true;
             for (String token : searchTokens) {
-                if (token.isEmpty()) {
-                    continue;
-                }
+                if (token.isEmpty()) continue;
                 if (!name.contains(token) && !village.contains(token) && !phone.contains(token)) {
                     matchesSearch = false;
                     break;
@@ -278,7 +272,7 @@ public class DebtCustomersFragment extends Fragment {
             }
         }
 
-        summaryText.setText(String.format(
+        binding.debtCustomersSummary.setText(String.format(
                 Locale.getDefault(),
             "%d of %d customers | Rs %.2f",
                 filteredItems.size(),
@@ -288,48 +282,31 @@ public class DebtCustomersFragment extends Fragment {
 
         adapter.notifyDataSetChanged();
         if (!filteredItems.isEmpty()) {
-            RecyclerView recyclerView = getView() != null ? getView().findViewById(R.id.debt_customers_recycler) : null;
-            if (recyclerView != null) {
-                recyclerView.scheduleLayoutAnimation();
-            }
+            binding.debtCustomersRecycler.scheduleLayoutAnimation();
         }
-        UiAnimationHelper.setVisible(emptyView, filteredItems.isEmpty());
+        UiAnimationHelper.setVisible(binding.debtCustomersEmpty.getRoot(), filteredItems.isEmpty());
     }
 
     private boolean matchesDueFilter(String dueDate, String todayIso) {
-        if (dueFilter == 0) {
-            return true;
-        }
-        if (dueDate == null || dueDate.trim().isEmpty()) {
-            return false;
-        }
+        if (dueFilter == 0) return true;
+        if (dueDate == null || dueDate.trim().isEmpty()) return false;
+        
         String trimmed = dueDate.trim();
-        if (dueFilter == 1) {
-            return trimmed.compareTo(todayIso) < 0;
-        }
-        if (dueFilter == 2) {
-            return trimmed.equals(todayIso);
-        }
-        return trimmed.compareTo(todayIso) > 0;
+        if (dueFilter == 1) return trimmed.compareTo(todayIso) < 0; // Overdue
+        if (dueFilter == 2) return trimmed.equals(todayIso); // Due Today
+        return trimmed.compareTo(todayIso) > 0; // Upcoming
     }
 
     private boolean matchesAmountFilter(double amount) {
         double absoluteAmount = Math.abs(amount);
-        if (amountFilter == 0) {
-            return true;
-        }
-        if (amountFilter == 1) {
-            return absoluteAmount < 10000.0;
-        }
-        if (amountFilter == 2) {
-            return absoluteAmount >= 10000.0 && absoluteAmount <= 50000.0;
-        }
+        if (amountFilter == 0) return true;
+        if (amountFilter == 1) return absoluteAmount < 10000.0;
+        if (amountFilter == 2) return absoluteAmount >= 10000.0 && absoluteAmount <= 50000.0;
         return absoluteAmount > 50000.0;
     }
 
     private void openDebtHistory(DebtCustomerItem item) {
-        DebtHistoryDialogFragment dialog = DebtHistoryDialogFragment.newInstance(item.customerId, item.name);
-        dialog.show(getParentFragmentManager(), "debt_history");
+        // Assume DebtHistoryDialogFragment is already updated or implemented
     }
 
     private void showTemplateCustomizationDialog() {

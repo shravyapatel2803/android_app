@@ -16,16 +16,16 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.view.MenuProvider;
+import androidx.lifecycle.Lifecycle;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.billgenerator.R;
 import com.example.billgenerator.database.databaseSystem;
+import com.example.billgenerator.databinding.FragmentStockManagementBinding;
 import com.example.billgenerator.ui.UiAnimationHelper;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.mlkit.vision.barcode.common.Barcode;
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanner;
@@ -34,7 +34,6 @@ import com.google.mlkit.vision.codescanner.GmsBarcodeScanning;
 
 import com.example.billgenerator.adapters.item_recycler_adapter_stocks;
 import com.example.billgenerator.models.item_recycler_model_stocks;
-import com.example.billgenerator.utils.CurrencyUtils;
 
 // <-- Added necessary imports -->
 import android.view.Menu;
@@ -61,21 +60,13 @@ import java.util.Locale;
 
 public class StockManagementFragment extends Fragment {
 
-    private RecyclerView recyclerView;
+    private FragmentStockManagementBinding binding;
     private item_recycler_adapter_stocks adapter;
     // Master list of all items
     private ArrayList<item_recycler_model_stocks> itemList = new ArrayList<>();
     // List displayed by the adapter (filtered)
     private ArrayList<item_recycler_model_stocks> filteredItemList = new ArrayList<>();
     private databaseSystem dbHelper;
-    private FloatingActionButton fab;
-    private View stockEmptyState;
-    private TextView stockTotalText;
-    private TextView stockAvailableText;
-    private TextView stockSoldText;
-    private MaterialAutoCompleteTextView statusDropdown;
-    private MaterialAutoCompleteTextView typeDropdown;
-    private MaterialAutoCompleteTextView weightDropdown;
     private String queryFilter = "";
     private int statusFilter = 0; // 0=all, 1=available, 2=sold
     private int typeFilter = 0; // 0=all, 1=gold, 2=silver, 3=other
@@ -87,11 +78,9 @@ public class StockManagementFragment extends Fragment {
     private final String[] weightOptions = new String[]{"All Weights", "Light (<5g)", "5-20g", "Heavy (>20g)"};
 
 
-    // <-- Added: Tell the fragment it has menu items -->
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
 
         GmsBarcodeScannerOptions options = new GmsBarcodeScannerOptions.Builder()
                 .setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS)
@@ -103,30 +92,58 @@ public class StockManagementFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        // Inflate the correct layout for stock management
-        return inflater.inflate(R.layout.activity_maintain, container, false);
+        binding = FragmentStockManagementBinding.inflate(inflater, container, false);
+        return binding.getRoot();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        dbHelper = new databaseSystem(getContext());
-        // IDs were corrected previously, ensure they match activity_maintain.xml
-        recyclerView = view.findViewById(R.id.stock_item_recyclerView);
-        fab = view.findViewById(R.id.fab_add_stock_item);
-        stockEmptyState = view.findViewById(R.id.stock_empty_state);
-        stockTotalText = view.findViewById(R.id.stock_total_count);
-        stockAvailableText = view.findViewById(R.id.stock_available_count);
-        stockSoldText = view.findViewById(R.id.stock_sold_count);
-        statusDropdown = view.findViewById(R.id.stock_status_dropdown);
-        typeDropdown = view.findViewById(R.id.stock_type_dropdown);
-        weightDropdown = view.findViewById(R.id.stock_weight_dropdown);
+        requireActivity().addMenuProvider(new MenuProvider() {
+            @Override
+            public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+                menuInflater.inflate(R.menu.maintain_menu, menu);
 
+                MenuItem searchItem = menu.findItem(R.id.action_search);
+                SearchView searchView = (SearchView) searchItem.getActionView();
+                if (searchView != null) {
+                    searchView.setQueryHint("Search by name or type...");
+                    searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+                        @Override public boolean onQueryTextSubmit(String query) {
+                            filter(query);
+                            return false;
+                        }
+                        @Override public boolean onQueryTextChange(String newText) {
+                            filter(newText);
+                            return true;
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public boolean onMenuItemSelected(@NonNull MenuItem menuItem) {
+                if (menuItem.getItemId() == R.id.action_generate_pdf) {
+                    generateStockPdf();
+                    return true;
+                }
+                return false;
+            }
+        }, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
+
+        dbHelper = new databaseSystem(getContext());
+        
         setupRecyclerView();
         setupStockFilters();
         UiAnimationHelper.configureEmptyState(
-                stockEmptyState,
+                binding.stockEmptyState.getRoot(),
                 R.drawable.ic_empty_inventory,
                 "Inventory is empty",
                 "Add your first gold or silver item to start tracking stock.",
@@ -135,15 +152,22 @@ public class StockManagementFragment extends Fragment {
         );
         loadItemsFromDB(); // Load initial data
 
-        fab.setOnClickListener(v -> showAddItemDialog());
+        binding.fabAddStockItem.setOnClickListener(v -> showAddItemDialog());
     }
 
     private void setupRecyclerView() {
-        // <-- IMPORTANT: Use the filteredList for the adapter -->
         adapter = new item_recycler_adapter_stocks(requireContext(), filteredItemList, this);
-        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        recyclerView.setAdapter(adapter);
-        UiAnimationHelper.setupRecyclerViewAnimations(recyclerView);
+        
+        // Dynamic column count for tablets
+        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        if (isTablet) {
+            binding.stockItemRecyclerView.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(getContext(), 2));
+        } else {
+            binding.stockItemRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        }
+
+        binding.stockItemRecyclerView.setAdapter(adapter);
+        UiAnimationHelper.setupRecyclerViewAnimations(binding.stockItemRecyclerView);
     }
 
     private void loadItemsFromDB() {
@@ -206,37 +230,31 @@ public class StockManagementFragment extends Fragment {
         }
         if (adapter != null) {
             adapter.notifyDataSetChanged();
-            if (recyclerView != null) {
-                recyclerView.scheduleLayoutAnimation();
-            }
+            binding.stockItemRecyclerView.scheduleLayoutAnimation();
         }
-        UiAnimationHelper.setVisible(stockEmptyState, filteredItemList.isEmpty());
+        UiAnimationHelper.setVisible(binding.stockEmptyState.getRoot(), filteredItemList.isEmpty());
     }
 
     private void setupStockFilters() {
-        if (statusDropdown == null || typeDropdown == null || weightDropdown == null) {
-            return;
-        }
+        binding.stockStatusDropdown.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, statusOptions));
+        binding.stockTypeDropdown.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, typeOptions));
+        binding.stockWeightDropdown.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, weightOptions));
 
-        statusDropdown.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, statusOptions));
-        typeDropdown.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, typeOptions));
-        weightDropdown.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, weightOptions));
+        binding.stockStatusDropdown.setText(statusOptions[statusFilter], false);
+        binding.stockTypeDropdown.setText(typeOptions[typeFilter], false);
+        binding.stockWeightDropdown.setText(weightOptions[weightFilter], false);
 
-        statusDropdown.setText(statusOptions[statusFilter], false);
-        typeDropdown.setText(typeOptions[typeFilter], false);
-        weightDropdown.setText(weightOptions[weightFilter], false);
-
-        statusDropdown.setOnItemClickListener((parent, view, position, id) -> {
+        binding.stockStatusDropdown.setOnItemClickListener((parent, view, position, id) -> {
             statusFilter = position;
             filter(queryFilter);
         });
 
-        typeDropdown.setOnItemClickListener((parent, view, position, id) -> {
+        binding.stockTypeDropdown.setOnItemClickListener((parent, view, position, id) -> {
             typeFilter = position;
             filter(queryFilter);
         });
 
-        weightDropdown.setOnItemClickListener((parent, view, position, id) -> {
+        binding.stockWeightDropdown.setOnItemClickListener((parent, view, position, id) -> {
             weightFilter = position;
             filter(queryFilter);
         });
@@ -252,15 +270,9 @@ public class StockManagementFragment extends Fragment {
         }
         int available = total - sold;
 
-        if (stockTotalText != null) {
-            stockTotalText.setText("Total: " + CurrencyUtils.formatAmountWithoutSymbol(total).replace(".00", ""));
-        }
-        if (stockAvailableText != null) {
-            stockAvailableText.setText("Available: " + CurrencyUtils.formatAmountWithoutSymbol(available).replace(".00", ""));
-        }
-        if (stockSoldText != null) {
-            stockSoldText.setText("Sold: " + CurrencyUtils.formatAmountWithoutSymbol(sold).replace(".00", ""));
-        }
+        binding.stockTotalCount.setText(String.valueOf(total));
+        binding.stockAvailableCount.setText(String.valueOf(available));
+        binding.stockSoldCount.setText(String.valueOf(sold));
     }
 
     public void showEditItemDialog(item_recycler_model_stocks item) {
@@ -385,39 +397,7 @@ public class StockManagementFragment extends Fragment {
         dialog.show();
     }
 
-    // <-- Added: Inflate the menu -->
-    @Override
-    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
-        inflater.inflate(R.menu.maintain_menu, menu); // Use the correct menu for stock
 
-        // --- Setup Search ---
-        MenuItem searchItem = menu.findItem(R.id.action_search);
-        SearchView searchView = (SearchView) searchItem.getActionView();
-        if (searchView != null) {
-            searchView.setQueryHint("Search by name or type...");
-            searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-                @Override public boolean onQueryTextSubmit(String query) {
-                    filter(query); // Optionally filter on submit too
-                    return false;
-                }
-                @Override public boolean onQueryTextChange(String newText) {
-                    filter(newText); // Filter as user types
-                    return true;
-                }
-            });
-        }
-        super.onCreateOptionsMenu(menu, inflater);
-    }
-
-    // <-- Added: Handle menu item clicks -->
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == R.id.action_generate_pdf) {
-            generateStockPdf(); // Call the PDF generation method
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
 
     // <-- Added: PDF Generation Logic (moved/adapted from Maintain activity) -->
     private void generateStockPdf() {

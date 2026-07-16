@@ -1,34 +1,26 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <style name="Base.Theme.BillGenerator" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/jewells_navy</item>
-        <item name="colorOnPrimary">#0B1B2A</item>
-        <item name="colorPrimaryContainer">@color/jewells_navy_container</item>
-        <item name="colorOnPrimaryContainer">@color/jewells_on_navy_container</item>
+        <!-- Main colors -->
+        <item name="colorPrimary">@color/md_theme_primary</item>
+        <item name="colorOnPrimary">@color/md_theme_onPrimary</item>
+        <item name="colorPrimaryContainer">@color/md_theme_primaryContainer</item>
+        <item name="colorOnPrimaryContainer">@color/md_theme_onPrimaryContainer</item>
 
-        <item name="colorSecondary">@color/jewells_gold</item>
-        <item name="colorOnSecondary">#2A1B00</item>
-        <item name="colorSecondaryContainer">@color/jewells_gold_container</item>
-        <item name="colorOnSecondaryContainer">@color/jewells_on_gold_container</item>
+        <item name="colorSecondary">@color/md_theme_secondary</item>
+        <item name="colorOnSecondary">@color/md_theme_onSecondary</item>
+        <item name="colorSecondaryContainer">@color/md_theme_secondaryContainer</item>
+        <item name="colorOnSecondaryContainer">@color/md_theme_onSecondaryContainer</item>
 
-        <item name="colorTertiary">@color/jewells_gold_light</item>
-        <item name="colorOnTertiary">#2A1B00</item>
-        <item name="colorTertiaryContainer">@color/jewells_gold_container</item>
-        <item name="colorOnTertiaryContainer">@color/jewells_on_gold_container</item>
-
-        <item name="android:windowBackground">@color/jewells_gradient_start</item>
-        <item name="colorSurface">@color/jewells_surface</item>
-        <item name="colorOnSurface">@color/jewells_on_surface</item>
-        <item name="colorSurfaceVariant">@color/jewells_surface_variant</item>
-        <item name="colorOnSurfaceVariant">@color/jewells_on_surface_variant</item>
+        <item name="colorSurface">@color/md_theme_surface</item>
+        <item name="colorOnSurface">@color/md_theme_onSurface</item>
         <item name="colorOutline">@color/jewells_outline</item>
 
-        <item name="android:statusBarColor">@color/jewells_gradient_start</item>
-        <item name="android:navigationBarColor">@color/jewells_gradient_center</item>
+        <item name="android:colorBackground">@color/md_theme_background</item>
+        <item name="android:windowBackground">@color/md_theme_background</item>
+        <item name="android:navigationBarColor">@color/md_theme_background</item>
+
+        <item name="android:statusBarColor">?attr/colorPrimary</item>
         <item name="android:windowLightStatusBar">false</item>
-
-        <item name="android:textColorPrimary">@color/jewells_on_surface</item>
-        <item name="android:textColorSecondary">@color/jewells_on_surface_variant</item>
     </style>
-
-    <style name="Theme.BillGenerator" parent="Base.Theme.BillGenerator" />
 </resources>

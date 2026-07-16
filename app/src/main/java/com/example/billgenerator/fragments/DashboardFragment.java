@@ -26,6 +26,7 @@ import androidx.fragment.app.Fragment;
 
 import com.example.billgenerator.MainActivity;
 import com.example.billgenerator.R;
+import com.example.billgenerator.databinding.FragmentDashboardBinding;
 import com.example.billgenerator.database.databaseSystem;
 import com.example.billgenerator.ui.UiAnimationHelper;
 import com.github.mikephil.charting.charts.BarChart;
@@ -60,18 +61,8 @@ import java.util.regex.Pattern;
 
 public class DashboardFragment extends Fragment {
 
-    private TextView tvTotalDebt;
-    private TextView tvDueTodayCount;
-    private TextView tvDueTodayAmount;
-    private TextView tvOverdueCount;
-    private TextView tvOverdueAmount;
-    private ViewGroup topDebtorsContainer;
-    private View dashboardDebtorsEmpty;
-    private Button openDebtCustomersButton;
-    private Button openNotificationsButton;
-    private Button restoreFromPdfsButton;
+    private FragmentDashboardBinding binding;
     private databaseSystem dbHelper;
-    private BarChart salesChart;
     private static final String TAG = "DashboardFragment";
     private ActivityResultLauncher<String[]> importPdfsLauncher;
     private final ExecutorService importExecutor = Executors.newSingleThreadExecutor();
@@ -105,43 +96,32 @@ public class DashboardFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_dashboard, container, false);
+        binding = FragmentDashboardBinding.inflate(inflater, container, false);
 
-        tvTotalDebt = view.findViewById(R.id.tv_total_debt);
-        tvDueTodayCount = view.findViewById(R.id.tv_due_today_count);
-        tvDueTodayAmount = view.findViewById(R.id.tv_due_today_amount);
-        tvOverdueCount = view.findViewById(R.id.tv_overdue_count);
-        tvOverdueAmount = view.findViewById(R.id.tv_overdue_amount);
-        topDebtorsContainer = view.findViewById(R.id.dashboard_top_debtors_container);
-        dashboardDebtorsEmpty = view.findViewById(R.id.dashboard_debtors_empty);
-        openDebtCustomersButton = view.findViewById(R.id.dashboard_open_debt_customers);
-        openNotificationsButton = view.findViewById(R.id.dashboard_open_notifications);
-        restoreFromPdfsButton = view.findViewById(R.id.restore_from_pdfs_button);
-        salesChart = view.findViewById(R.id.dashboard_sales_chart);
         dbHelper = new databaseSystem(requireContext());
 
-        if (openDebtCustomersButton != null) {
-            openDebtCustomersButton.setOnClickListener(v -> {
+        if (binding.dashboardOpenDebtCustomers != null) {
+            binding.dashboardOpenDebtCustomers.setOnClickListener(v -> {
                 if (requireActivity() instanceof MainActivity) {
                     ((MainActivity) requireActivity()).navigateToDestination(7);
                 }
             });
         }
 
-        if (openNotificationsButton != null) {
-            openNotificationsButton.setOnClickListener(v -> {
+        if (binding.dashboardOpenNotifications != null) {
+            binding.dashboardOpenNotifications.setOnClickListener(v -> {
                 if (requireActivity() instanceof MainActivity) {
                     ((MainActivity) requireActivity()).navigateToDestination(5);
                 }
             });
         }
 
-        if (restoreFromPdfsButton != null) {
-            restoreFromPdfsButton.setOnClickListener(v -> showRestoreConfirmation());
+        if (binding.restoreFromPdfsButton != null) {
+            binding.restoreFromPdfsButton.setOnClickListener(v -> showRestoreConfirmation());
         }
 
         UiAnimationHelper.configureEmptyState(
-                dashboardDebtorsEmpty,
+                binding.dashboardDebtorsEmpty.getRoot(),
                 R.drawable.ic_empty_debt,
                 "All clear!",
                 "No outstanding debts right now. Your customers are up to date.",
@@ -153,7 +133,13 @@ public class DashboardFragment extends Fragment {
                 }
         );
 
-        return view;
+        return binding.getRoot();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
     }
 
     @Override
@@ -171,8 +157,6 @@ public class DashboardFragment extends Fragment {
     }
 
     private void loadSalesChart() {
-        if (salesChart == null) return;
-
         ArrayList<BarEntry> entries = new ArrayList<>();
         ArrayList<String> labels = new ArrayList<>();
         SQLiteDatabase db = dbHelper.getReadableDatabase();
@@ -222,22 +206,22 @@ public class DashboardFragment extends Fragment {
         });
 
         BarData data = new BarData(dataSet);
-        salesChart.setData(data);
-        salesChart.getDescription().setEnabled(false);
-        salesChart.getAxisRight().setEnabled(false);
-        salesChart.getLegend().setEnabled(false);
+        binding.dashboardSalesChart.setData(data);
+        binding.dashboardSalesChart.getDescription().setEnabled(false);
+        binding.dashboardSalesChart.getAxisRight().setEnabled(false);
+        binding.dashboardSalesChart.getLegend().setEnabled(false);
         
-        XAxis xAxis = salesChart.getXAxis();
+        XAxis xAxis = binding.dashboardSalesChart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setValueFormatter(new IndexAxisValueFormatter(labels));
         xAxis.setGranularity(1f);
         xAxis.setDrawGridLines(false);
         
-        salesChart.getAxisLeft().setDrawGridLines(true);
-        salesChart.getAxisLeft().setGridColor(0x1A000000);
-        salesChart.setFitBars(true);
-        salesChart.animateY(1000);
-        salesChart.invalidate();
+        binding.dashboardSalesChart.getAxisLeft().setDrawGridLines(true);
+        binding.dashboardSalesChart.getAxisLeft().setGridColor(0x1A000000);
+        binding.dashboardSalesChart.setFitBars(true);
+        binding.dashboardSalesChart.animateY(1000);
+        binding.dashboardSalesChart.invalidate();
     }
 
     private void loadDebtDueInsights() {
@@ -253,24 +237,16 @@ public class DashboardFragment extends Fragment {
             if (dueTodayCursor.moveToFirst()) {
                 int count = dueTodayCursor.getInt(0);
                 double amount = dueTodayCursor.getDouble(1);
-                if (tvDueTodayCount != null) {
-                    tvDueTodayCount.setText(String.format(Locale.getDefault(), "%d bill%s", count, count == 1 ? "" : "s"));
-                }
-                if (tvDueTodayAmount != null) {
-                    tvDueTodayAmount.setText(currencyFormat.format(amount));
-                }
+                binding.tvDueTodayCount.setText(String.format(Locale.getDefault(), "%d bill%s", count, count == 1 ? "" : "s"));
+                binding.tvDueTodayAmount.setText(currencyFormat.format(amount));
             }
 
             overdueCursor = db.rawQuery(overdueQuery, null);
             if (overdueCursor.moveToFirst()) {
                 int count = overdueCursor.getInt(0);
                 double amount = overdueCursor.getDouble(1);
-                if (tvOverdueCount != null) {
-                    tvOverdueCount.setText(String.format(Locale.getDefault(), "%d bill%s", count, count == 1 ? "" : "s"));
-                }
-                if (tvOverdueAmount != null) {
-                    tvOverdueAmount.setText(currencyFormat.format(amount));
-                }
+                binding.tvOverdueCount.setText(String.format(Locale.getDefault(), "%d bill%s", count, count == 1 ? "" : "s"));
+                binding.tvOverdueAmount.setText(currencyFormat.format(amount));
             }
         } catch (Exception e) {
             Log.e(TAG, "Error loading due insights", e);
@@ -285,11 +261,7 @@ public class DashboardFragment extends Fragment {
     }
 
     private void loadTopDebtors() {
-        if (topDebtorsContainer == null) {
-            return;
-        }
-
-        topDebtorsContainer.removeAllViews();
+        binding.dashboardTopDebtorsContainer.removeAllViews();
         Cursor cursor = null;
         int shown = 0;
 
@@ -313,7 +285,7 @@ public class DashboardFragment extends Fragment {
                     double debt = debtCol != -1 ? cursor.getDouble(debtCol) : 0.0;
                     String dueDate = dueDateCol != -1 ? cursor.getString(dueDateCol) : null;
 
-                    topDebtorsContainer.addView(createDebtorRow(name, village, phone, debt, dueDate));
+                    binding.dashboardTopDebtorsContainer.addView(createDebtorRow(name, village, phone, debt, dueDate));
                     shown++;
                 } while (cursor.moveToNext());
             }
@@ -325,7 +297,7 @@ public class DashboardFragment extends Fragment {
             }
         }
 
-        UiAnimationHelper.setVisible(dashboardDebtorsEmpty, shown == 0);
+        UiAnimationHelper.setVisible(binding.dashboardDebtorsEmpty.getRoot(), shown == 0);
     }
 
     private View createDebtorRow(String name, String village, String phone, double debt, String dueDate) {
@@ -884,11 +856,11 @@ public class DashboardFragment extends Fragment {
             cursor = db.rawQuery("SELECT SUM(debt) FROM customer", null);
             if (cursor.moveToFirst()) {
                 double totalDebt = cursor.getDouble(0);
-                tvTotalDebt.setText(currencyFormat.format(totalDebt));
+                binding.tvTotalDebt.setText(currencyFormat.format(totalDebt));
             }
         } catch (Exception e) {
             Log.e(TAG, "Error fetching debt", e);
-            tvTotalDebt.setText("Error");
+            binding.tvTotalDebt.setText("Error");
         } finally {
             if (cursor != null) cursor.close();
         }
